@@ -104,6 +104,13 @@ class MappingStore:
             await self._async_save()
         return removed
 
+    async def async_remove_pending(self, code: str) -> bool:
+        """Drop a code from the pending list, leaving any mapping alone."""
+        if self._pending.pop(normalize_code(code), None) is None:
+            return False
+        await self._async_save()
+        return True
+
     async def async_record_scan(self, code: str) -> None:
         """Increase the scan counter of a known mapping."""
         code = normalize_code(code)

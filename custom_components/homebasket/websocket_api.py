@@ -59,6 +59,7 @@ def async_register(hass: HomeAssistant) -> None:
         websocket_set_photo,
         websocket_delete_photo,
         websocket_details,
+        websocket_dismiss_pending,
     ):
         ws.async_register_command(hass, handler)
 
@@ -265,3 +266,17 @@ async def websocket_details(
 
     details = await manager.async_fetch_details(code)
     connection.send_result(msg["id"], {"details": details, "cached": False})
+
+
+@ws.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/pending/dismiss", vol.Required("code"): str}
+)
+@ws.async_response
+async def websocket_dismiss_pending(
+    hass: HomeAssistant, connection: ws.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Forget that a code was scanned, without touching any product."""
+    manager = _manager(hass)
+    removed = await manager.store.async_remove_pending(msg["code"])
+    manager.async_notify_updated()
+    connection.send_result(msg["id"], {"removed": removed})
