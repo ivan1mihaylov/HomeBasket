@@ -22,7 +22,7 @@ offline.
 ```
 
 The dashboard card lives in a separate repository:
-[**HomeBasket-card**](https://github.com/ivan1mihaylov/HomeBasket-card).
+[**HomeBasket-Card**](https://github.com/ivan1mihaylov/HomeBasket-Card).
 
 ## Installation
 
