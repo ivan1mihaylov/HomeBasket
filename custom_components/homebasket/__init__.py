@@ -15,16 +15,24 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
 from . import websocket_api
+from .api import HomeBasketAPI
 from .const import (
     ATTR_ADD_TO_LIST,
     ATTR_BRAND,
     ATTR_CATEGORY,
     ATTR_CODE,
+    ATTR_INCLUDE_DETAILS,
+    ATTR_INCLUDE_PHOTO,
     ATTR_NAME,
     ATTR_OVERWRITE,
     ATTR_PATH,
+    ATTR_QUERY,
+    ATTR_REFRESH,
+    DATA_API,
     DOMAIN,
     SERVICE_ADD_MAPPING,
+    SERVICE_GET_PRODUCT,
+    SERVICE_GET_PRODUCTS,
     SERVICE_IMPORT_MAPPINGS,
     SERVICE_LOOKUP,
     SERVICE_REMOVE_MAPPING,
@@ -66,6 +74,22 @@ SCAN_SCHEMA = CODE_SCHEMA.extend(
 
 LOOKUP_SCHEMA = CODE_SCHEMA
 
+GET_PRODUCT_SCHEMA = CODE_SCHEMA.extend(
+    {
+        vol.Optional(ATTR_INCLUDE_DETAILS, default=True): cv.boolean,
+        vol.Optional(ATTR_INCLUDE_PHOTO, default=False): cv.boolean,
+        vol.Optional(ATTR_REFRESH, default=False): cv.boolean,
+    }
+)
+
+GET_PRODUCTS_SCHEMA = vol.Schema(
+    {
+        vol.Optional(ATTR_QUERY): cv.string,
+        vol.Optional(ATTR_CATEGORY): cv.string,
+        vol.Optional(ATTR_INCLUDE_DETAILS, default=False): cv.boolean,
+    }
+)
+
 IMPORT_MAPPINGS_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_PATH): cv.string,
@@ -102,6 +126,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await manager.async_setup()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = manager
+    # Published for other integrations; see api.py.
+    hass.data[DATA_API] = HomeBasketAPI(manager)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _async_register_services(hass)
@@ -118,6 +144,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok:
         manager: HomeBasketManager = hass.data[DOMAIN].pop(entry.entry_id)
         await manager.async_unload()
+        hass.data.pop(DATA_API, None)
         if not hass.data[DOMAIN]:
             for service in (
                 SERVICE_ADD_MAPPING,
@@ -125,6 +152,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 SERVICE_SCAN,
                 SERVICE_LOOKUP,
                 SERVICE_IMPORT_MAPPINGS,
+                SERVICE_GET_PRODUCT,
+                SERVICE_GET_PRODUCTS,
             ):
                 hass.services.async_remove(DOMAIN, service)
     return unload_ok
@@ -223,7 +252,44 @@ def _async_register_services(hass: HomeAssistant) -> None:
         _LOGGER.info("Imported %s mappings from %s", imported, path)
         return {"imported": imported}
 
+    async def async_get_product(call: ServiceCall) -> ServiceResponse:
+        api = hass.data[DATA_API]
+        code = _code_of(call)
+        product = api.get(code)
+        if product is None:
+            return {"found": False}
+
+        if call.data[ATTR_INCLUDE_DETAILS]:
+            product["details"] = await api.async_get_details(
+                code, refresh=call.data[ATTR_REFRESH]
+            )
+        if call.data[ATTR_INCLUDE_PHOTO]:
+            product["photo"] = await api.async_get_photo(code)
+        return {"found": True, "product": product}
+
+    async def async_get_products(call: ServiceCall) -> ServiceResponse:
+        api = hass.data[DATA_API]
+
+        products = (
+            api.find(query) if (query := call.data.get(ATTR_QUERY)) else api.products
+        )
+        if category := call.data.get(ATTR_CATEGORY):
+            wanted = category.casefold()
+            products = [
+                item
+                for item in products
+                if str(item.get("category") or "").casefold() == wanted
+            ]
+
+        if call.data[ATTR_INCLUDE_DETAILS]:
+            for product in products:
+                product["details"] = await api.async_get_details(product["code"])
+
+        return {"count": len(products), "products": products}
+
     services = (
+        (SERVICE_GET_PRODUCT, async_get_product, GET_PRODUCT_SCHEMA),
+        (SERVICE_GET_PRODUCTS, async_get_products, GET_PRODUCTS_SCHEMA),
         (SERVICE_ADD_MAPPING, async_add_mapping, ADD_MAPPING_SCHEMA),
         (SERVICE_REMOVE_MAPPING, async_remove_mapping, REMOVE_MAPPING_SCHEMA),
         (SERVICE_SCAN, async_scan, SCAN_SCHEMA),

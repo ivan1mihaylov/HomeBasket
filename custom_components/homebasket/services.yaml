@@ -1,3 +1,67 @@
+get_product:
+  name: Get a product
+  description: >-
+    Return everything HomeBasket knows about one barcode, for use by other
+    integrations, scripts and automations.
+  fields:
+    code:
+      name: Barcode
+      description: The barcode to look up in the local dictionary.
+      required: true
+      example: "3800123456789"
+      selector:
+        text:
+    include_details:
+      name: Include Open Food Facts details
+      description: Attach the cached nutrition, ingredients and label data.
+      required: false
+      default: true
+      selector:
+        boolean:
+    include_photo:
+      name: Include the photo
+      description: >-
+        Attach a photo taken or uploaded for this product, as a data URL. Off
+        by default because it is large.
+      required: false
+      default: false
+      selector:
+        boolean:
+    refresh:
+      name: Refresh the details
+      description: Re-query Open Food Facts instead of using the cached record.
+      required: false
+      default: false
+      selector:
+        boolean:
+
+get_products:
+  name: Get products
+  description: Return the products HomeBasket has learned, optionally filtered.
+  fields:
+    query:
+      name: Search
+      description: Keep only products whose name, brand, category or code matches.
+      required: false
+      example: мляко
+      selector:
+        text:
+    category:
+      name: Category
+      description: Keep only products in exactly this category.
+      required: false
+      example: Млечни продукти
+      selector:
+        text:
+    include_details:
+      name: Include Open Food Facts details
+      description: >-
+        Attach the cached record to every product. This can be a lot of data.
+      required: false
+      default: false
+      selector:
+        boolean:
+
 add_mapping:
   name: Add product mapping
   description: >-

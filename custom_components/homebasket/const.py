@@ -5,6 +5,9 @@ from __future__ import annotations
 from typing import Final
 
 DOMAIN: Final = "homebasket"
+
+# Where the public API object is published for other integrations.
+DATA_API: Final = "homebasket_api"
 VERSION: Final = "0.1.0"
 
 # Config / options keys
@@ -49,6 +52,8 @@ SERVICE_REMOVE_MAPPING: Final = "remove_mapping"
 SERVICE_SCAN: Final = "scan"
 SERVICE_LOOKUP: Final = "lookup"
 SERVICE_IMPORT_MAPPINGS: Final = "import_mappings"
+SERVICE_GET_PRODUCT: Final = "get_product"
+SERVICE_GET_PRODUCTS: Final = "get_products"
 
 ATTR_CODE: Final = "code"
 ATTR_NAME: Final = "name"
@@ -57,3 +62,7 @@ ATTR_CATEGORY: Final = "category"
 ATTR_ADD_TO_LIST: Final = "add_to_list"
 ATTR_PATH: Final = "path"
 ATTR_OVERWRITE: Final = "overwrite"
+ATTR_QUERY: Final = "query"
+ATTR_INCLUDE_DETAILS: Final = "include_details"
+ATTR_INCLUDE_PHOTO: Final = "include_photo"
+ATTR_REFRESH: Final = "refresh"

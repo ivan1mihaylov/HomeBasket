@@ -157,6 +157,69 @@ Those photos are kept in Home Assistant's own storage
 WebSocket API, so they are never exposed on a public path the way files in
 `www/` are. Forgetting a product deletes its photo with it.
 
+## Using HomeBasket from another integration
+
+HomeBasket publishes what it knows so other custom integrations, scripts and
+external tools can build on it. There are three ways in, all returning the same
+product shape.
+
+### From Python
+
+A custom integration reads the object HomeBasket puts in `hass.data`. Do not
+reach into `hass.data["homebasket"]` — that holds internals that will change.
+
+```python
+api = hass.data.get("homebasket_api")
+if api is None:
+    return  # HomeBasket is not installed or not set up yet
+
+for product in api.products:
+    print(product["code"], product["name"], product["category"])
+
+milk = api.get("3800123456789")
+details = await api.async_get_details("3800123456789")   # cached, no network
+photo = await api.async_get_photo("3800123456789")       # data URL, or None
+```
+
+| Member | Returns |
+| --- | --- |
+| `api_version` | `1` today. Check it before relying on the shape. |
+| `products` | Every product: `code`, `name`, `brand`, `category`, `image`, `source`, `scan_count`, `has_photo`. |
+| `pending` | Scanned codes that could not be identified. |
+| `get(code)` | One product, or `None`. |
+| `find(text)` | Products matching a name, brand, category or code. |
+| `await async_get_details(code, refresh=False)` | The full Open Food Facts record from the cache; `refresh=True` re-queries. |
+| `await async_get_photo(code)` | A user photo as a data URL, or `None`. `image` on a product is a remote URL and needs no call. |
+| `await async_resolve(code, add_to_list=False)` | Run a barcode through the scan pipeline. |
+| `await async_shopping_list()` | The open items on the configured list. |
+| `todo_entity`, `language` | The current configuration. |
+
+Everything returned is a copy, so a consumer cannot corrupt the stored data.
+Listen for the `homebasket_updated` event to know when to re-read.
+
+### From an automation or a script
+
+```yaml
+action: homebasket.get_product
+data:
+  code: "3800123456789"
+  include_details: true
+response_variable: result
+```
+
+`homebasket.get_products` returns them all, and takes `query` or `category` to
+narrow the list. Both leave the data untouched.
+
+### Over HTTP
+
+```bash
+curl https://your-ha/api/homebasket/product/3800123456789 \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+`?details=0` drops the Open Food Facts record, `?photo=1` adds the stored photo.
+`/api/homebasket/mappings` returns the whole dictionary.
+
 ## Credits
 
 HomeBasket is an independent implementation, written from scratch. The idea of
