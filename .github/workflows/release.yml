@@ -1,0 +1,48 @@
+name: Release
+
+# Run from Actions → Release → Run workflow. It tags the current commit and
+# publishes a GitHub Release, which is what HACS reads to offer an update.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release, without the leading v (e.g. 0.2.0)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the version matches the manifest
+        run: |
+          manifest=$(python3 -c "import json; print(json.load(open('custom_components/homebasket/manifest.json'))['version'])")
+          if [ "$manifest" != "${{ inputs.version }}" ]; then
+            echo "manifest.json says $manifest, you asked for ${{ inputs.version }}" >&2
+            exit 1
+          fi
+
+      - name: Refuse to release a tag that already exists
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/v${{ inputs.version }}"; then
+            echo "v${{ inputs.version }} is already tagged" >&2
+            exit 1
+          fi
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes=docs/RELEASE_NOTES.md
+          if [ -f "$notes" ]; then
+            gh release create "v${{ inputs.version }}" \
+              --title "v${{ inputs.version }}" --notes-file "$notes" --latest
+          else
+            gh release create "v${{ inputs.version }}" \
+              --title "v${{ inputs.version }}" --generate-notes --latest
+          fi
