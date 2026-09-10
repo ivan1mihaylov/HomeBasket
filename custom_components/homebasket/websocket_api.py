@@ -60,6 +60,8 @@ def async_register(hass: HomeAssistant) -> None:
         websocket_delete_photo,
         websocket_details,
         websocket_dismiss_pending,
+        websocket_link_code,
+        websocket_unlink_code,
     ):
         ws.async_register_command(hass, handler)
 
@@ -278,5 +280,40 @@ async def websocket_dismiss_pending(
     """Forget that a code was scanned, without touching any product."""
     manager = _manager(hass)
     removed = await manager.store.async_remove_pending(msg["code"])
+    manager.async_notify_updated()
+    connection.send_result(msg["id"], {"removed": removed})
+
+
+@ws.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/alias/add",
+        vol.Required("code"): str,
+        vol.Required("product"): str,
+    }
+)
+@ws.async_response
+async def websocket_link_code(
+    hass: HomeAssistant, connection: ws.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Attach a second barcode to an existing product."""
+    manager = _manager(hass)
+    target = await manager.async_link_code(msg["code"], msg["product"])
+    if target is None:
+        connection.send_error(msg["id"], "not_found", "No such product")
+        return
+    manager.async_notify_updated()
+    connection.send_result(msg["id"], {"product": target})
+
+
+@ws.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/alias/remove", vol.Required("code"): str}
+)
+@ws.async_response
+async def websocket_unlink_code(
+    hass: HomeAssistant, connection: ws.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Detach a barcode from its product, leaving the product in place."""
+    manager = _manager(hass)
+    removed = await manager.store.async_remove_alias(msg["code"])
     manager.async_notify_updated()
     connection.send_result(msg["id"], {"removed": removed})

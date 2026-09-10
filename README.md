@@ -134,6 +134,20 @@ Both `{"3800...": "Мляко"}` and `{"3800...": {"name": "Мляко"}}` shape
 understood, and existing HomeBasket entries are kept unless you pass
 `overwrite: true`.
 
+## More than one barcode per product
+
+A product is stored under the barcode it was first scanned with. Any further
+barcode for the same product is stored as a pointer to that one, so the same
+yoghurt in two pack sizes is one product with two codes.
+
+Every barcode of a product resolves to it: scanning, editing, `get_product`
+and the API all accept any of them. `codes` on a product lists them all, and
+`code` is the first. Deleting a product takes its other barcodes, its photo and
+its cached records with it.
+
+The card links and unlinks barcodes; from Python it is
+`await api.async_link_code(code, product)`.
+
 ## Product details
 
 Everything Open Food Facts returns for a barcode — scores, nutrition,

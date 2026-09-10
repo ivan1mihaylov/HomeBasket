@@ -142,6 +142,7 @@ class HomeBasketManager:
         code = normalize_code(code)
         result: dict[str, Any] = {
             "code": code,
+            "product_code": code,
             "name": None,
             "brand": None,
             "category": None,
@@ -156,8 +157,10 @@ class HomeBasketManager:
         if not code:
             return result
 
-        if (mapping := self.store.get(code)) is not None:
+        if (resolved := self.store.resolve(code)) is not None:
+            primary, mapping = resolved
             result.update(
+                product_code=primary,
                 name=mapping.get("name"),
                 brand=mapping.get("brand"),
                 category=mapping.get("category"),
@@ -255,11 +258,31 @@ class HomeBasketManager:
         return details
 
     async def async_forget(self, code: str) -> bool:
-        """Remove a mapping together with any photo and cached details."""
+        """Remove a product, its other barcodes, its photo and its records."""
         removed = await self.store.async_remove_mapping(code)
-        await self.images.async_delete(code)
-        await self.details.async_delete(code)
-        return removed
+        for entry_code in removed:
+            await self.images.async_delete(entry_code)
+            await self.details.async_delete(entry_code)
+        return bool(removed)
+
+    async def async_link_code(self, code: str, primary: str) -> str | None:
+        """Attach a barcode to an existing product.
+
+        A photo taken for the barcode is kept when the product has none, so
+        linking never silently loses a picture.
+        """
+        code = normalize_code(code)
+        target = await self.store.async_add_alias(code, primary)
+        if target is None:
+            return None
+
+        if code != target and self.images.has(code):
+            if not self.images.has(target) and (
+                photo := await self.images.async_get(code)
+            ):
+                await self.images.async_set(target, photo)
+            await self.images.async_delete(code)
+        return target
 
     @callback
     def async_notify_updated(self) -> None:

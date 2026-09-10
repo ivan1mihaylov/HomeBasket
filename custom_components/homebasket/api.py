@@ -55,8 +55,9 @@ class HomeBasketAPI:
     def products(self) -> list[dict[str, Any]]:
         """Return every known product.
 
-        Each entry carries `code`, `name`, `brand`, `category`, `image`,
-        `source`, `scan_count` and `has_photo`.
+        Each entry carries `code` (the product's first barcode), `codes`
+        (all of them), `name`, `brand`, `category`, `image`, `source`,
+        `scan_count` and `has_photo`.
         """
         return [self._decorate(item) for item in self._manager.store.as_list()]
 
@@ -66,10 +67,16 @@ class HomeBasketAPI:
         return self._manager.store.pending_as_list()
 
     def get(self, code: str) -> dict[str, Any] | None:
-        """Return one product by barcode, or None when it is unknown."""
-        if (entry := self._manager.store.get(code)) is None:
+        """Return the product a barcode belongs to, or None when unknown.
+
+        Any of a product's barcodes returns the same product.
+        """
+        if (resolved := self._manager.store.resolve(code)) is None:
             return None
-        return self._decorate({"code": str(code).strip(), **entry})
+        primary, entry = resolved
+        return self._decorate(
+            {"code": primary, "codes": self._manager.store.codes_for(primary), **entry}
+        )
 
     def find(self, text: str) -> list[dict[str, Any]]:
         """Return the products whose name, brand or category matches `text`."""
@@ -126,6 +133,14 @@ class HomeBasketAPI:
         return await self._manager.async_handle_code(
             code, add_to_list=add_to_list, source=source
         )
+
+    async def async_link_code(self, code: str, product: str) -> str | None:
+        """Attach another barcode to an existing product.
+
+        `product` may be any of the product's barcodes. Returns the product's
+        first barcode, or None when there is no such product.
+        """
+        return await self._manager.async_link_code(code, product)
 
     async def async_shopping_list(self) -> list[str]:
         """Return the open items on the configured shopping list."""

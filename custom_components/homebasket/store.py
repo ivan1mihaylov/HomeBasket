@@ -14,6 +14,11 @@ from .const import SOURCE_IMPORT, SOURCE_MANUAL, STORAGE_KEY, STORAGE_VERSION
 # "clear this field" - the card needs both.
 KEEP = object()
 
+# A product is stored under its first barcode. Any further barcode for the
+# same product is stored as {"alias_of": "<first barcode>"}, so the same
+# yoghurt in a 400 g and a 900 g tub can share one entry.
+ALIAS_KEY = "alias_of"
+
 
 def normalize_code(code: Any) -> str:
     """Return a canonical representation of a scanned code."""
@@ -52,13 +57,41 @@ class MappingStore:
         """Return codes that were scanned but could not be identified."""
         return self._pending
 
+    def resolve(self, code: str) -> tuple[str, dict[str, Any]] | None:
+        """Return the (primary code, product) a barcode belongs to."""
+        code = normalize_code(code)
+        if (entry := self._mappings.get(code)) is None:
+            return None
+        if (primary := entry.get(ALIAS_KEY)) is None:
+            return code, entry
+
+        target = self._mappings.get(primary)
+        if target is None or ALIAS_KEY in target:
+            return None  # A dangling alias behaves like an unknown code.
+        return primary, target
+
     def get(self, code: str) -> dict[str, Any] | None:
-        """Return a single mapping, or None when the code is unknown."""
-        return self._mappings.get(normalize_code(code))
+        """Return the product a barcode belongs to, or None when unknown."""
+        resolved = self.resolve(code)
+        return resolved[1] if resolved else None
+
+    def codes_for(self, primary: str) -> list[str]:
+        """Return every barcode of a product, its first one first."""
+        primary = normalize_code(primary)
+        aliases = sorted(
+            code
+            for code, entry in self._mappings.items()
+            if entry.get(ALIAS_KEY) == primary
+        )
+        return [primary, *aliases]
 
     def as_list(self) -> list[dict[str, Any]]:
-        """Return the mappings as a list suitable for the frontend."""
-        return [{"code": code, **entry} for code, entry in self._mappings.items()]
+        """Return the products as a list suitable for the frontend."""
+        return [
+            {"code": code, "codes": self.codes_for(code), **entry}
+            for code, entry in self._mappings.items()
+            if ALIAS_KEY not in entry
+        ]
 
     def pending_as_list(self) -> list[dict[str, Any]]:
         """Return the pending codes as a list suitable for the frontend."""
@@ -74,8 +107,9 @@ class MappingStore:
         image: str | None | object = KEEP,
         source: str = SOURCE_MANUAL,
     ) -> dict[str, Any]:
-        """Create or update a mapping and drop it from the pending list."""
-        code = normalize_code(code)
+        """Create or update a product and drop the code from the pending list."""
+        scanned = normalize_code(code)
+        code = resolved[0] if (resolved := self.resolve(scanned)) else scanned
         now = dt_util.utcnow().isoformat()
         existing = self._mappings.get(code, {})
 
@@ -92,17 +126,66 @@ class MappingStore:
         }
         self._mappings[code] = entry
         self._pending.pop(code, None)
+        self._pending.pop(scanned, None)
         await self._async_save()
-        return {"code": code, **entry}
+        return {"code": code, "codes": self.codes_for(code), **entry}
 
-    async def async_remove_mapping(self, code: str) -> bool:
-        """Remove a mapping. Returns True when something was removed."""
-        code = normalize_code(code)
-        removed = self._mappings.pop(code, None) is not None
-        removed = self._pending.pop(code, None) is not None or removed
+    async def async_remove_mapping(self, code: str) -> list[str]:
+        """Remove a product and every barcode of it.
+
+        Returns the codes that were removed, so their photos and cached
+        records can be cleaned up too.
+        """
+        scanned = normalize_code(code)
+        removed: list[str] = []
+
+        if (resolved := self.resolve(scanned)) is not None:
+            for entry_code in self.codes_for(resolved[0]):
+                self._mappings.pop(entry_code, None)
+                self._pending.pop(entry_code, None)
+                removed.append(entry_code)
+        elif self._mappings.pop(scanned, None) is not None:
+            removed.append(scanned)  # A dangling alias.
+
+        if self._pending.pop(scanned, None) is not None and scanned not in removed:
+            removed.append(scanned)
+
         if removed:
             await self._async_save()
         return removed
+
+    async def async_add_alias(self, code: str, primary: str) -> str | None:
+        """Attach a barcode to an existing product.
+
+        When the barcode is itself a product, its own barcodes come along and
+        its entry is dropped. Returns the product's first barcode, or None
+        when the target does not exist.
+        """
+        code = normalize_code(code)
+        if (resolved := self.resolve(primary)) is None:
+            return None
+
+        target = resolved[0]
+        if code == target or not code:
+            return target
+
+        for other, entry in list(self._mappings.items()):
+            if entry.get(ALIAS_KEY) == code:
+                self._mappings[other] = {ALIAS_KEY: target}
+
+        self._mappings[code] = {ALIAS_KEY: target}
+        self._pending.pop(code, None)
+        await self._async_save()
+        return target
+
+    async def async_remove_alias(self, code: str) -> bool:
+        """Detach a barcode from its product, leaving the product alone."""
+        code = normalize_code(code)
+        if ALIAS_KEY not in (self._mappings.get(code) or {}):
+            return False
+        del self._mappings[code]
+        await self._async_save()
+        return True
 
     async def async_remove_pending(self, code: str) -> bool:
         """Drop a code from the pending list, leaving any mapping alone."""
@@ -112,10 +195,10 @@ class MappingStore:
         return True
 
     async def async_record_scan(self, code: str) -> None:
-        """Increase the scan counter of a known mapping."""
-        code = normalize_code(code)
-        if (entry := self._mappings.get(code)) is None:
+        """Increase the scan counter of a known product."""
+        if (resolved := self.resolve(code)) is None:
             return
+        entry = resolved[1]
         entry["scan_count"] = entry.get("scan_count", 0) + 1
         entry["last_scanned"] = dt_util.utcnow().isoformat()
         await self._async_save()
@@ -123,7 +206,7 @@ class MappingStore:
     async def async_add_pending(self, code: str) -> None:
         """Remember a code we could not identify so the card can ask for a name."""
         code = normalize_code(code)
-        if code in self._mappings:
+        if self.resolve(code) is not None:
             return
         entry = self._pending.get(code, {"scan_count": 0})
         entry["scan_count"] = entry.get("scan_count", 0) + 1
