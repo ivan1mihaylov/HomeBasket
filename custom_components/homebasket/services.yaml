@@ -1,0 +1,95 @@
+add_mapping:
+  name: Add product mapping
+  description: >-
+    Teach HomeBasket which product a barcode belongs to. The next scan of that
+    code goes straight to the shopping list.
+  fields:
+    code:
+      name: Barcode
+      description: The barcode (EAN/UPC/QR) to remember.
+      required: true
+      example: "3800123456789"
+      selector:
+        text:
+    name:
+      name: Product name
+      description: The name that should appear on the shopping list.
+      required: true
+      example: Прясно мляко
+      selector:
+        text:
+    brand:
+      name: Brand
+      description: Optional brand, shown in the dashboard card only.
+      required: false
+      example: Верея
+      selector:
+        text:
+
+remove_mapping:
+  name: Remove product mapping
+  description: Forget a barcode HomeBasket has learned.
+  fields:
+    code:
+      name: Barcode
+      description: The barcode to forget.
+      required: true
+      example: "3800123456789"
+      selector:
+        text:
+
+scan:
+  name: Scan a barcode
+  description: >-
+    Run a barcode through the full pipeline - local dictionary, then Open Food
+    Facts - and put the resulting product on the shopping list.
+  fields:
+    code:
+      name: Barcode
+      description: The scanned barcode.
+      required: true
+      example: "3800123456789"
+      selector:
+        text:
+    add_to_list:
+      name: Add to shopping list
+      description: Turn off to only resolve the name without adding an item.
+      required: false
+      default: true
+      selector:
+        boolean:
+
+lookup:
+  name: Look up a barcode
+  description: >-
+    Query Open Food Facts for a barcode without changing the dictionary or the
+    shopping list. Returns the product it found.
+  fields:
+    code:
+      name: Barcode
+      description: The barcode to look up.
+      required: true
+      example: "3800123456789"
+      selector:
+        text:
+
+import_mappings:
+  name: Import mappings
+  description: >-
+    Import a barcode dictionary from a JSON file, for example the
+    barcode_cache.json of another integration.
+  fields:
+    path:
+      name: File path
+      description: Absolute path to the JSON file, inside your configuration folder.
+      required: true
+      example: /config/custom_components/beepbasket/barcode_cache.json
+      selector:
+        text:
+    overwrite:
+      name: Overwrite existing
+      description: Replace mappings that HomeBasket already knows.
+      required: false
+      default: false
+      selector:
+        boolean:

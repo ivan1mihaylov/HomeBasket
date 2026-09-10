@@ -1,0 +1,45 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HomeBasket",
+        "description": "Choose the shopping list scanned products should land on.",
+        "data": {
+          "todo_entity": "Shopping list",
+          "use_openfoodfacts": "Look unknown barcodes up on Open Food Facts",
+          "add_unknown": "Add unidentified barcodes to the list as-is",
+          "language": "Preferred product name language",
+          "event_names": "Scanner events to listen for"
+        },
+        "data_description": {
+          "add_unknown": "When off, an unidentified code waits in the card until you name it.",
+          "language": "Two letter code, for example bg or en.",
+          "event_names": "Comma separated list of Home Assistant events fired by external scanners."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "HomeBasket is already set up."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HomeBasket options",
+        "data": {
+          "todo_entity": "Shopping list",
+          "use_openfoodfacts": "Look unknown barcodes up on Open Food Facts",
+          "add_unknown": "Add unidentified barcodes to the list as-is",
+          "language": "Preferred product name language",
+          "event_names": "Scanner events to listen for"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "last_scan": { "name": "Last scan" },
+      "known_products": { "name": "Known products" }
+    }
+  }
+}

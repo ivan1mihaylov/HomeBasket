@@ -1,0 +1,148 @@
+# HomeBasket
+
+Scan a barcode, get the product on your Home Assistant shopping list.
+
+HomeBasket keeps a local dictionary of `barcode → product name`. When a code it
+does not know shows up, it asks [Open Food Facts](https://world.openfoodfacts.org/)
+and remembers the answer, so the second scan of the same product is instant and
+offline.
+
+```
+        scan
+          │
+          ▼
+   known barcode? ──yes──▶ product name ─┐
+          │ no                           │
+          ▼                              │
+   Open Food Facts ──found──▶ remember ──┤
+          │ not found                    │
+          ▼                              ▼
+   waits in the card          todo.add_item  ──▶  ✅ shopping list
+   until you name it          (duplicates skipped)
+```
+
+The dashboard card lives in a separate repository:
+[**HomeBasket-card**](https://github.com/ivan1mihaylov/HomeBasket-card).
+
+## Installation
+
+### HACS (custom repository)
+
+1. HACS → ⋮ → **Custom repositories**
+2. URL `https://github.com/ivan1mihaylov/HomeBasket`, type **Integration**
+3. Install **HomeBasket**, then restart Home Assistant
+4. **Settings → Devices & Services → Add Integration → HomeBasket**
+
+### Manual
+
+Copy `custom_components/homebasket` into your `config/custom_components/` folder
+and restart Home Assistant.
+
+## Configuration
+
+Everything is configured in the UI, and can be changed later through
+**Configure** on the integration entry.
+
+| Option | Meaning |
+| --- | --- |
+| **Shopping list** | The `todo.*` entity scanned products are added to. |
+| **Look unknown barcodes up on Open Food Facts** | Turn off to run fully offline. |
+| **Add unidentified barcodes to the list as-is** | Off by default; unidentified codes wait in the card instead of putting a raw number on your list. |
+| **Preferred product name language** | Two letter code, e.g. `bg`. Falls back to the international name. |
+| **Scanner events to listen for** | Comma separated. Default `barcode_scanned`. |
+
+## Entities
+
+| Entity | Description |
+| --- | --- |
+| `sensor.homebasket_last_scan` | The last scanned code, with the resolved product, status and whether it was added as attributes. |
+| `sensor.homebasket_known_products` | How many products HomeBasket has learned, plus the codes still waiting for a name. |
+
+## Actions
+
+| Action | What it does |
+| --- | --- |
+| `homebasket.scan` | Full pipeline: resolve the code and add it to the list. |
+| `homebasket.add_mapping` | Teach HomeBasket a `barcode → product` pair. |
+| `homebasket.remove_mapping` | Forget a barcode. |
+| `homebasket.lookup` | Query Open Food Facts without changing anything. |
+| `homebasket.import_mappings` | Import a JSON barcode dictionary (see below). |
+
+All actions accept both `code` and the older `barcode` spelling, and
+`add_mapping` accepts `name`, `product` or `product_name`.
+
+```yaml
+action: homebasket.scan
+data:
+  code: "3800123456789"
+```
+
+```yaml
+action: homebasket.add_mapping
+data:
+  code: "3800123456789"
+  name: Прясно мляко
+```
+
+## Hardware scanners
+
+Any scanner that can fire a Home Assistant event works. Fire
+`barcode_scanned` with the code in one of `barcode`, `code`, `tag_id`, `text`
+or `value`:
+
+```yaml
+automation:
+  - triggers:
+      - trigger: event
+        event_type: esphome.barcode
+    actions:
+      - action: homebasket.scan
+        data:
+          code: "{{ trigger.event.data.barcode }}"
+```
+
+Or POST straight to the REST endpoint with a long-lived access token:
+
+```bash
+curl -X POST https://your-ha/api/homebasket/scan \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"code": "3800123456789"}'
+```
+
+## Events
+
+| Event | Fired when |
+| --- | --- |
+| `homebasket_scanned` | A code was processed. Payload: `code`, `name`, `brand`, `image`, `status`, `added`, `already_on_list`, `source`, `timestamp`. |
+| `homebasket_updated` | The dictionary changed; the card refreshes on this. |
+
+`status` is `known`, `looked_up` or `unknown`.
+
+## Migrating an existing barcode dictionary
+
+If you have been using another barcode integration, import its cache once:
+
+```yaml
+action: homebasket.import_mappings
+data:
+  path: /config/custom_components/beepbasket/barcode_cache.json
+```
+
+Both `{"3800...": "Мляко"}` and `{"3800...": {"name": "Мляко"}}` shapes are
+understood, and existing HomeBasket entries are kept unless you pass
+`overwrite: true`.
+
+## Credits
+
+HomeBasket is an independent implementation, written from scratch. The idea of
+beeping barcodes straight into a Home Assistant shopping list comes from
+[BeepBasket](https://github.com/meijerwynand/beepbasket) by Wynand Meijer — no
+code from that project is used here.
+
+Product data comes from [Open Food Facts](https://world.openfoodfacts.org/),
+an open database licensed under ODbL.
+
+## License
+
+[MIT](LICENSE)
