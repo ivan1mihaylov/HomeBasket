@@ -103,6 +103,11 @@ async def async_lookup(
 
     brand = (product.get("brands") or "").split(",")[0].strip() or None
     quantity = (product.get("quantity") or "").strip() or None
+
+    # Open Food Facts keeps the brand out of product_name, which leaves names
+    # like "Original Taste" that say nothing on a shopping list.
+    if brand and brand.lower() not in name.lower():
+        name = f"{brand} {name}"
     if quantity and quantity.lower() not in name.lower():
         name = f"{name} {quantity}"
 
