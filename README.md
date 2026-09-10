@@ -134,6 +134,18 @@ Both `{"3800...": "Мляко"}` and `{"3800...": {"name": "Мляко"}}` shape
 understood, and existing HomeBasket entries are kept unless you pass
 `overwrite: true`.
 
+## Product details
+
+Everything Open Food Facts returns for a barcode — scores, nutrition,
+ingredients, allergens, labels, packaging, origin, stores — is stored the first
+time the code is looked up, so the card can show it without going back to the
+network. Only an explicit re-lookup (`homebasket.lookup`, or **Look up again**
+in the card) refreshes that copy.
+
+The cache lives in `.storage/homebasket.details` and is loaded the first time
+something reads it rather than at startup, so it costs nothing until a product
+is opened. Forgetting a product drops its record.
+
 ## Product photos
 
 Open Food Facts usually supplies a product image, and HomeBasket stores its URL

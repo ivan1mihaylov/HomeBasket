@@ -14,7 +14,7 @@ from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, Supp
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
-from . import openfoodfacts, websocket_api
+from . import websocket_api
 from .const import (
     ATTR_ADD_TO_LIST,
     ATTR_BRAND,
@@ -31,6 +31,7 @@ from .const import (
     SERVICE_SCAN,
     SOURCE_MANUAL,
 )
+from .details import DetailStore
 from .http_api import async_register_http_api
 from .images import ImageStore
 from .manager import HomeBasketManager
@@ -97,7 +98,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     images = ImageStore(hass)
     await images.async_load()
 
-    manager = HomeBasketManager(hass, entry, store, images)
+    manager = HomeBasketManager(hass, entry, store, images, DetailStore(hass))
     await manager.async_setup()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = manager
@@ -180,10 +181,16 @@ def _async_register_services(hass: HomeAssistant) -> None:
 
     async def async_lookup(call: ServiceCall) -> ServiceResponse:
         manager = _get_manager(hass)
-        product = await openfoodfacts.async_lookup(
-            hass, _code_of(call), manager.language
-        )
-        return {"found": product is not None, **(product or {})}
+        details = await manager.async_fetch_details(_code_of(call))
+        if details is None:
+            return {"found": False}
+        return {
+            "found": True,
+            "name": details["label"],
+            "brand": details["brand"],
+            "category": details["category"],
+            "image": details["image"],
+        }
 
     async def async_import_mappings(call: ServiceCall) -> ServiceResponse:
         manager = _get_manager(hass)

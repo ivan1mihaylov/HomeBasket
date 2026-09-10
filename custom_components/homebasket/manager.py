@@ -30,6 +30,7 @@ from .const import (
     STATUS_LOOKED_UP,
     STATUS_UNKNOWN,
 )
+from .details import DetailStore
 from .images import ImageStore
 from .store import MappingStore, normalize_code
 
@@ -45,12 +46,14 @@ class HomeBasketManager:
         entry: ConfigEntry,
         store: MappingStore,
         images: ImageStore,
+        details: DetailStore,
     ) -> None:
         """Initialise the manager."""
         self.hass = hass
         self.entry = entry
         self.store = store
         self.images = images
+        self.details = details
         self.last_scan: dict[str, Any] | None = None
         self._unsubscribes: list[Any] = []
 
@@ -163,12 +166,10 @@ class HomeBasketManager:
             )
             await self.store.async_record_scan(code)
         elif self.use_openfoodfacts:
-            if (product := await openfoodfacts.async_lookup(
-                self.hass, code, self.language
-            )) is not None:
+            if (product := await self.async_fetch_details(code)) is not None:
                 await self.store.async_save_mapping(
                     code,
-                    product["name"],
+                    product["label"],
                     brand=product.get("brand"),
                     category=product.get("category"),
                     image=product.get("image"),
@@ -176,7 +177,7 @@ class HomeBasketManager:
                 )
                 await self.store.async_record_scan(code)
                 result.update(
-                    name=product["name"],
+                    name=product["label"],
                     brand=product.get("brand"),
                     category=product.get("category"),
                     image=product.get("image"),
@@ -246,10 +247,18 @@ class HomeBasketManager:
         items = (response or {}).get(entity_id, {}).get("items", [])
         return [item["summary"] for item in items if item.get("summary")]
 
+    async def async_fetch_details(self, code: str) -> dict[str, Any] | None:
+        """Ask Open Food Facts about a code and cache what comes back."""
+        details = await openfoodfacts.async_fetch(self.hass, code, self.language)
+        if details is not None:
+            await self.details.async_set(code, details)
+        return details
+
     async def async_forget(self, code: str) -> bool:
-        """Remove a mapping together with any photo taken for it."""
+        """Remove a mapping together with any photo and cached details."""
         removed = await self.store.async_remove_mapping(code)
         await self.images.async_delete(code)
+        await self.details.async_delete(code)
         return removed
 
     @callback

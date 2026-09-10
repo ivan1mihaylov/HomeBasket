@@ -10,7 +10,6 @@ from homeassistant.components import websocket_api as ws
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 
-from . import openfoodfacts
 from .const import DOMAIN, SOURCE_MANUAL
 from .images import InvalidImage
 from .manager import HomeBasketManager
@@ -59,6 +58,7 @@ def async_register(hass: HomeAssistant) -> None:
         websocket_get_photo,
         websocket_set_photo,
         websocket_delete_photo,
+        websocket_details,
     ):
         ws.async_register_command(hass, handler)
 
@@ -149,9 +149,18 @@ async def websocket_lookup(
 ) -> None:
     """Look a code up online without touching the list or the dictionary."""
     manager = _manager(hass)
-    product = await openfoodfacts.async_lookup(hass, msg["code"], manager.language)
+    details = await manager.async_fetch_details(msg["code"])
     connection.send_result(
-        msg["id"], {"found": product is not None, **(product or {})}
+        msg["id"],
+        {"found": False}
+        if details is None
+        else {
+            "found": True,
+            "name": details["label"],
+            "brand": details["brand"],
+            "category": details["category"],
+            "image": details["image"],
+        },
     )
 
 
@@ -225,3 +234,34 @@ async def websocket_delete_photo(
     removed = await manager.images.async_delete(msg["code"])
     manager.async_notify_updated()
     connection.send_result(msg["id"], {"removed": removed})
+
+
+@ws.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/details",
+        vol.Required("code"): str,
+        vol.Optional("refresh", default=False): bool,
+    }
+)
+@ws.async_response
+async def websocket_details(
+    hass: HomeAssistant, connection: ws.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Return the full Open Food Facts record for a product.
+
+    The cached copy is used unless `refresh` asks for a fresh fetch, so
+    opening a product does not hit Open Food Facts every time.
+    """
+    manager = _manager(hass)
+    code = msg["code"]
+
+    if not msg["refresh"]:
+        if (cached := await manager.details.async_get(code)) is not None:
+            connection.send_result(msg["id"], {"details": cached, "cached": True})
+            return
+        if not manager.use_openfoodfacts:
+            connection.send_result(msg["id"], {"details": None, "cached": False})
+            return
+
+    details = await manager.async_fetch_details(code)
+    connection.send_result(msg["id"], {"details": details, "cached": False})
