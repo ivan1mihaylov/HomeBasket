@@ -79,6 +79,7 @@ async def websocket_get_state(
         vol.Required("name"): str,
         vol.Optional("brand"): vol.Any(str, None),
         vol.Optional("category"): vol.Any(str, None),
+        vol.Optional("image"): vol.Any(str, None),
         vol.Optional("add_to_list", default=False): bool,
     }
 )
@@ -88,12 +89,15 @@ async def websocket_save_mapping(
 ) -> None:
     """Create or update a mapping, optionally adding it to the list."""
     manager = _manager(hass)
+    # Only the fields the card actually sent are touched, so an omitted key
+    # keeps its stored value while an explicit null clears it.
+    optional = {key: msg[key] for key in ("category", "image") if key in msg}
     entry = await manager.store.async_save_mapping(
         msg["code"],
         msg["name"],
         brand=msg.get("brand"),
-        category=msg.get("category"),
         source=SOURCE_MANUAL,
+        **optional,
     )
     result: dict[str, Any] = {"mapping": entry, "added": False, "already_on_list": False}
     if msg["add_to_list"]:

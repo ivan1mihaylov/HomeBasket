@@ -10,6 +10,11 @@ from homeassistant.util import dt as dt_util
 
 from .const import SOURCE_IMPORT, SOURCE_MANUAL, STORAGE_KEY, STORAGE_VERSION
 
+# Sentinel for "leave this field as it is", so that passing None can mean
+# "clear this field" - the card needs both.
+KEEP = object()
+
+
 def normalize_code(code: Any) -> str:
     """Return a canonical representation of a scanned code."""
     return str(code or "").strip()
@@ -65,8 +70,8 @@ class MappingStore:
         name: str,
         *,
         brand: str | None = None,
-        category: str | None = None,
-        image: str | None = None,
+        category: str | None | object = KEEP,
+        image: str | None | object = KEEP,
         source: str = SOURCE_MANUAL,
     ) -> dict[str, Any]:
         """Create or update a mapping and drop it from the pending list."""
@@ -78,8 +83,8 @@ class MappingStore:
             **existing,
             "name": name.strip(),
             "brand": brand or existing.get("brand"),
-            "category": category if category is not None else existing.get("category"),
-            "image": image or existing.get("image"),
+            "category": existing.get("category") if category is KEEP else category,
+            "image": existing.get("image") if image is KEEP else image,
             "source": source,
             "created": existing.get("created", now),
             "updated": now,
