@@ -25,6 +25,13 @@ add_mapping:
       example: Верея
       selector:
         text:
+    category:
+      name: Category
+      description: Optional category, shown as a chip in the dashboard card.
+      required: false
+      example: Млечни продукти
+      selector:
+        text:
 
 remove_mapping:
   name: Remove product mapping

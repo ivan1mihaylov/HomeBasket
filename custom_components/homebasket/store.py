@@ -65,6 +65,7 @@ class MappingStore:
         name: str,
         *,
         brand: str | None = None,
+        category: str | None = None,
         image: str | None = None,
         source: str = SOURCE_MANUAL,
     ) -> dict[str, Any]:
@@ -77,6 +78,7 @@ class MappingStore:
             **existing,
             "name": name.strip(),
             "brand": brand or existing.get("brand"),
+            "category": category if category is not None else existing.get("category"),
             "image": image or existing.get("image"),
             "source": source,
             "created": existing.get("created", now),
@@ -134,10 +136,11 @@ class MappingStore:
             if isinstance(raw_value, dict):
                 name = raw_value.get("name") or raw_value.get("product")
                 brand = raw_value.get("brand") or raw_value.get("brands")
+                category = raw_value.get("category")
                 image = raw_value.get("image")
             else:
                 name = raw_value
-                brand = image = None
+                brand = category = image = None
 
             if not name:
                 continue
@@ -145,6 +148,7 @@ class MappingStore:
             self._mappings[code] = {
                 "name": str(name).strip(),
                 "brand": brand,
+                "category": category,
                 "image": image,
                 "source": SOURCE_IMPORT,
                 "created": now,

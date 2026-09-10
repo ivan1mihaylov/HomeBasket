@@ -30,6 +30,7 @@ from .const import (
     STATUS_LOOKED_UP,
     STATUS_UNKNOWN,
 )
+from .images import ImageStore
 from .store import MappingStore, normalize_code
 
 _LOGGER = logging.getLogger(__name__)
@@ -39,12 +40,17 @@ class HomeBasketManager:
     """Owns the mapping store and turns scanned codes into shopping list items."""
 
     def __init__(
-        self, hass: HomeAssistant, entry: ConfigEntry, store: MappingStore
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry,
+        store: MappingStore,
+        images: ImageStore,
     ) -> None:
         """Initialise the manager."""
         self.hass = hass
         self.entry = entry
         self.store = store
+        self.images = images
         self.last_scan: dict[str, Any] | None = None
         self._unsubscribes: list[Any] = []
 
@@ -135,6 +141,7 @@ class HomeBasketManager:
             "code": code,
             "name": None,
             "brand": None,
+            "category": None,
             "image": None,
             "status": STATUS_UNKNOWN,
             "added": False,
@@ -150,6 +157,7 @@ class HomeBasketManager:
             result.update(
                 name=mapping.get("name"),
                 brand=mapping.get("brand"),
+                category=mapping.get("category"),
                 image=mapping.get("image"),
                 status=STATUS_KNOWN,
             )
@@ -162,6 +170,7 @@ class HomeBasketManager:
                     code,
                     product["name"],
                     brand=product.get("brand"),
+                    category=product.get("category"),
                     image=product.get("image"),
                     source=SOURCE_OPENFOODFACTS,
                 )
@@ -169,6 +178,7 @@ class HomeBasketManager:
                 result.update(
                     name=product["name"],
                     brand=product.get("brand"),
+                    category=product.get("category"),
                     image=product.get("image"),
                     status=STATUS_LOOKED_UP,
                 )
@@ -235,6 +245,12 @@ class HomeBasketManager:
 
         items = (response or {}).get(entity_id, {}).get("items", [])
         return [item["summary"] for item in items if item.get("summary")]
+
+    async def async_forget(self, code: str) -> bool:
+        """Remove a mapping together with any photo taken for it."""
+        removed = await self.store.async_remove_mapping(code)
+        await self.images.async_delete(code)
+        return removed
 
     @callback
     def async_notify_updated(self) -> None:

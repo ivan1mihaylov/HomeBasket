@@ -18,6 +18,7 @@ from . import openfoodfacts, websocket_api
 from .const import (
     ATTR_ADD_TO_LIST,
     ATTR_BRAND,
+    ATTR_CATEGORY,
     ATTR_CODE,
     ATTR_NAME,
     ATTR_OVERWRITE,
@@ -31,6 +32,7 @@ from .const import (
     SOURCE_MANUAL,
 )
 from .http_api import async_register_http_api
+from .images import ImageStore
 from .manager import HomeBasketManager
 from .store import MappingStore
 
@@ -51,6 +53,7 @@ ADD_MAPPING_SCHEMA = CODE_SCHEMA.extend(
     {
         **{vol.Optional(key): cv.string for key in NAME_KEYS},
         vol.Optional(ATTR_BRAND): cv.string,
+        vol.Optional(ATTR_CATEGORY): cv.string,
     }
 )
 
@@ -91,7 +94,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     store = MappingStore(hass)
     await store.async_load()
 
-    manager = HomeBasketManager(hass, entry, store)
+    images = ImageStore(hass)
+    await images.async_load()
+
+    manager = HomeBasketManager(hass, entry, store, images)
     await manager.async_setup()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = manager
@@ -149,14 +155,18 @@ def _async_register_services(hass: HomeAssistant) -> None:
         if not code or not name:
             raise HomeAssistantError("Both a code and a product name are required")
         entry = await manager.store.async_save_mapping(
-            code, name, brand=call.data.get(ATTR_BRAND), source=SOURCE_MANUAL
+            code,
+            name,
+            brand=call.data.get(ATTR_BRAND),
+            category=call.data.get(ATTR_CATEGORY),
+            source=SOURCE_MANUAL,
         )
         manager.async_notify_updated()
         return dict(entry)
 
     async def async_remove_mapping(call: ServiceCall) -> ServiceResponse:
         manager = _get_manager(hass)
-        removed = await manager.store.async_remove_mapping(_code_of(call))
+        removed = await manager.async_forget(_code_of(call))
         manager.async_notify_updated()
         return {"removed": removed}
 

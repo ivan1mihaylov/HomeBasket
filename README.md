@@ -63,7 +63,7 @@ Everything is configured in the UI, and can be changed later through
 | Action | What it does |
 | --- | --- |
 | `homebasket.scan` | Full pipeline: resolve the code and add it to the list. |
-| `homebasket.add_mapping` | Teach HomeBasket a `barcode → product` pair. |
+| `homebasket.add_mapping` | Teach HomeBasket a `barcode → product` pair, optionally with a category. |
 | `homebasket.remove_mapping` | Forget a barcode. |
 | `homebasket.lookup` | Query Open Food Facts without changing anything. |
 | `homebasket.import_mappings` | Import a JSON barcode dictionary (see below). |
@@ -82,6 +82,7 @@ action: homebasket.add_mapping
 data:
   code: "3800123456789"
   name: Прясно мляко
+  category: Млечни продукти
 ```
 
 ## Hardware scanners
@@ -114,7 +115,7 @@ curl -X POST https://your-ha/api/homebasket/scan \
 
 | Event | Fired when |
 | --- | --- |
-| `homebasket_scanned` | A code was processed. Payload: `code`, `name`, `brand`, `image`, `status`, `added`, `already_on_list`, `source`, `timestamp`. |
+| `homebasket_scanned` | A code was processed. Payload: `code`, `name`, `brand`, `category`, `image`, `status`, `added`, `already_on_list`, `source`, `timestamp`. |
 | `homebasket_updated` | The dictionary changed; the card refreshes on this. |
 
 `status` is `known`, `looked_up` or `unknown`.
@@ -132,6 +133,17 @@ data:
 Both `{"3800...": "Мляко"}` and `{"3800...": {"name": "Мляко"}}` shapes are
 understood, and existing HomeBasket entries are kept unless you pass
 `overwrite: true`.
+
+## Product photos
+
+Open Food Facts usually supplies a product image, and HomeBasket stores its URL
+alongside the name. For anything it does not cover — loose produce, a local
+bakery, a own-brand item — the dashboard card can take or upload a photo.
+
+Those photos are kept in Home Assistant's own storage
+(`.storage/homebasket_images/`) and are read back over the authenticated
+WebSocket API, so they are never exposed on a public path the way files in
+`www/` are. Forgetting a product deletes its photo with it.
 
 ## Credits
 

@@ -22,10 +22,33 @@ BASE_FIELDS = (
     "generic_name",
     "brands",
     "quantity",
+    "categories",
     "image_front_small_url",
+    "image_front_url",
 )
 TIMEOUT = aiohttp.ClientTimeout(total=10)
 USER_AGENT = f"HomeBasket/{VERSION} (Home Assistant custom integration)"
+
+
+def _pick_category(product: dict[str, Any], language: str | None) -> str | None:
+    """Return the most specific category, in the user's language when possible.
+
+    Open Food Facts orders its comma separated categories from general to
+    specific, so the last one is the useful label for a shopping list.
+    """
+    keys = []
+    if language:
+        keys.append(f"categories_{language.lower().split('-')[0]}")
+    keys.append("categories")
+
+    for key in keys:
+        value = product.get(key)
+        if not isinstance(value, str) or not value.strip():
+            continue
+        parts = [part.strip() for part in value.split(",") if part.strip()]
+        if parts:
+            return parts[-1]
+    return None
 
 
 def _pick_name(product: dict[str, Any], language: str | None) -> str | None:
@@ -50,7 +73,7 @@ async def async_lookup(
     fields = list(BASE_FIELDS)
     if language:
         lang = language.lower().split("-")[0]
-        fields += [f"product_name_{lang}", f"generic_name_{lang}"]
+        fields += [f"product_name_{lang}", f"generic_name_{lang}", f"categories_{lang}"]
 
     session = async_get_clientsession(hass)
     url = API_URL.format(code=code)
@@ -86,5 +109,8 @@ async def async_lookup(
     return {
         "name": name,
         "brand": brand,
-        "image": product.get("image_front_small_url") or None,
+        "category": _pick_category(product, language),
+        "image": product.get("image_front_small_url")
+        or product.get("image_front_url")
+        or None,
     }

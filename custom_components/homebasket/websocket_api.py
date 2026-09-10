@@ -12,6 +12,7 @@ from homeassistant.exceptions import HomeAssistantError
 
 from . import openfoodfacts
 from .const import DOMAIN, SOURCE_MANUAL
+from .images import InvalidImage
 from .manager import HomeBasketManager
 
 _REGISTERED = f"{DOMAIN}_ws_registered"
@@ -27,11 +28,16 @@ def _manager(hass: HomeAssistant) -> HomeBasketManager:
 
 def _state(manager: HomeBasketManager) -> dict[str, Any]:
     """Return the payload the card renders itself from."""
+    mappings = [
+        {**item, "has_photo": manager.images.has(item["code"])}
+        for item in manager.store.as_list()
+    ]
     return {
-        "mappings": manager.store.as_list(),
+        "mappings": mappings,
         "pending": manager.store.pending_as_list(),
         "last_scan": manager.last_scan,
         "todo_entity": manager.todo_entity,
+        "language": manager.language,
     }
 
 
@@ -50,6 +56,9 @@ def async_register(hass: HomeAssistant) -> None:
         websocket_lookup,
         websocket_add_to_list,
         websocket_list_items,
+        websocket_get_photo,
+        websocket_set_photo,
+        websocket_delete_photo,
     ):
         ws.async_register_command(hass, handler)
 
@@ -69,6 +78,7 @@ async def websocket_get_state(
         vol.Required("code"): str,
         vol.Required("name"): str,
         vol.Optional("brand"): vol.Any(str, None),
+        vol.Optional("category"): vol.Any(str, None),
         vol.Optional("add_to_list", default=False): bool,
     }
 )
@@ -79,7 +89,11 @@ async def websocket_save_mapping(
     """Create or update a mapping, optionally adding it to the list."""
     manager = _manager(hass)
     entry = await manager.store.async_save_mapping(
-        msg["code"], msg["name"], brand=msg.get("brand"), source=SOURCE_MANUAL
+        msg["code"],
+        msg["name"],
+        brand=msg.get("brand"),
+        category=msg.get("category"),
+        source=SOURCE_MANUAL,
     )
     result: dict[str, Any] = {"mapping": entry, "added": False, "already_on_list": False}
     if msg["add_to_list"]:
@@ -98,7 +112,7 @@ async def websocket_delete_mapping(
 ) -> None:
     """Delete a mapping."""
     manager = _manager(hass)
-    removed = await manager.store.async_remove_mapping(msg["code"])
+    removed = await manager.async_forget(msg["code"])
     manager.async_notify_updated()
     connection.send_result(msg["id"], {"removed": removed})
 
@@ -159,3 +173,51 @@ async def websocket_list_items(
     connection.send_result(
         msg["id"], {"items": await _manager(hass).async_list_items()}
     )
+
+
+@ws.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/photo/get", vol.Required("code"): str}
+)
+@ws.async_response
+async def websocket_get_photo(
+    hass: HomeAssistant, connection: ws.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Return a locally stored product photo as a data URL."""
+    photo = await _manager(hass).images.async_get(msg["code"])
+    connection.send_result(msg["id"], {"photo": photo})
+
+
+@ws.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/photo/set",
+        vol.Required("code"): str,
+        vol.Required("photo"): str,
+    }
+)
+@ws.async_response
+async def websocket_set_photo(
+    hass: HomeAssistant, connection: ws.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Store a photo the user took or uploaded for a product."""
+    manager = _manager(hass)
+    try:
+        await manager.images.async_set(msg["code"], msg["photo"])
+    except InvalidImage as err:
+        connection.send_error(msg["id"], "invalid_image", str(err))
+        return
+    manager.async_notify_updated()
+    connection.send_result(msg["id"], {"saved": True})
+
+
+@ws.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/photo/delete", vol.Required("code"): str}
+)
+@ws.async_response
+async def websocket_delete_photo(
+    hass: HomeAssistant, connection: ws.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Remove a stored product photo."""
+    manager = _manager(hass)
+    removed = await manager.images.async_delete(msg["code"])
+    manager.async_notify_updated()
+    connection.send_result(msg["id"], {"removed": removed})
