@@ -148,6 +148,12 @@ its cached records with it.
 The card links and unlinks barcodes; from Python it is
 `await api.async_link_code(code, product)`.
 
+One physical label can also be reported two ways: a UPC-A barcode is twelve
+digits, and the very same label read as EAN-13 comes back with a leading zero.
+Which one you get depends on the scanner, so both readings resolve to the same
+product — scanning something you already have opens it instead of creating a
+second copy of it.
+
 ## Product details
 
 Everything Open Food Facts returns for a barcode — scores, nutrition,
@@ -233,6 +239,17 @@ curl https://your-ha/api/homebasket/product/3800123456789 \
 
 `?details=0` drops the Open Food Facts record, `?photo=1` adds the stored photo.
 `/api/homebasket/mappings` returns the whole dictionary.
+
+## Development
+
+The barcode dictionary has a test that runs without Home Assistant:
+
+```bash
+python3 tests/test_store.py
+```
+
+It covers what a scan resolves to, including the same label read as UPC-A and
+as EAN-13.
 
 ## Credits
 

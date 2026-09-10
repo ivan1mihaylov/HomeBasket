@@ -25,6 +25,24 @@ def normalize_code(code: Any) -> str:
     return str(code or "").strip()
 
 
+def code_variants(code: str) -> list[str]:
+    """Return the ways the same physical barcode can be reported.
+
+    A UPC-A label is twelve digits, and the very same label read as EAN-13
+    comes back with a leading zero. Which one you get depends on the scanner,
+    so a product saved from one reading must still be found by the other -
+    otherwise scanning a product you already have creates a second one.
+    """
+    code = normalize_code(code)
+    if not code.isdigit():
+        return [code]
+    if len(code) == 13 and code.startswith("0"):
+        return [code, code[1:]]
+    if len(code) == 12:
+        return [code, f"0{code}"]
+    return [code]
+
+
 class MappingStore:
     """Keeps the barcode dictionary and the list of not-yet-named codes."""
 
@@ -59,16 +77,18 @@ class MappingStore:
 
     def resolve(self, code: str) -> tuple[str, dict[str, Any]] | None:
         """Return the (primary code, product) a barcode belongs to."""
-        code = normalize_code(code)
-        if (entry := self._mappings.get(code)) is None:
-            return None
-        if (primary := entry.get(ALIAS_KEY)) is None:
-            return code, entry
+        for candidate in code_variants(code):
+            if (entry := self._mappings.get(candidate)) is None:
+                continue
+            if (primary := entry.get(ALIAS_KEY)) is None:
+                return candidate, entry
 
-        target = self._mappings.get(primary)
-        if target is None or ALIAS_KEY in target:
-            return None  # A dangling alias behaves like an unknown code.
-        return primary, target
+            target = self._mappings.get(primary)
+            if target is not None and ALIAS_KEY not in target:
+                return primary, target
+            # A dangling alias behaves like an unknown code, but the other
+            # spelling of the same barcode may still lead somewhere.
+        return None
 
     def get(self, code: str) -> dict[str, Any] | None:
         """Return the product a barcode belongs to, or None when unknown."""
