@@ -1,0 +1,30 @@
+name: Validate
+
+# What HACS itself runs against a repository. Everything here must pass before
+# the repository can be listed in HACS by default, so it runs on every push and
+# once a night - HACS's own rules change without this repository changing.
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  hacs:
+    name: HACS
+    runs-on: ubuntu-latest
+    steps:
+      - name: HACS validation
+        uses: hacs/action@main
+        with:
+          category: integration
+
+  hassfest:
+    name: hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master
