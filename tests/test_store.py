@@ -175,6 +175,16 @@ async def main() -> None:
         ["3800024911001"],
     )
 
+    # Renaming leaves everything else about a product as it was.
+    await loose.async_save_mapping("4003994103586", "Кисело мляко", kind="food")
+    before = dict(loose.get("4003994103586"))
+    check("renaming says it changed something", await loose.async_set_name("4003994103586", "Кисело мляко 3,6%"), True)
+    after = loose.get("4003994103586")
+    check("...the name is the new one", after["name"], "Кисело мляко 3,6%")
+    check("...what it is stays", (after["kind"], after["source"]), (before["kind"], before["source"]))
+    check("...and the same name again changes nothing", await loose.async_set_name("4003994103586", "Кисело мляко 3,6%"), False)
+    check("...nor does an empty one", await loose.async_set_name("4003994103586", "  "), False)
+
     print("\nall barcode checks passed")
 
 

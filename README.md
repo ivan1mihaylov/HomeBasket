@@ -154,7 +154,8 @@ barcode**.
 They arrive on their own: whenever something to buy is configured on a
 HomeBasket Lists list — its name, its picture, the kind of shop it comes from —
 the list hands it over, so the next time you start typing that name anywhere,
-it is offered with everything it already knows.
+it is offered with everything it already knows. Renaming it there renames it
+here; products a database named are left alone.
 
 A product's sheet has a field to **attach a barcode by hand**. Type one in and
 it belongs to that product from then on, so scanning it finds the name, the

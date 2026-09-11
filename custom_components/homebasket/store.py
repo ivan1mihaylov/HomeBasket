@@ -240,6 +240,27 @@ class MappingStore:
                 return code, entry
         return None
 
+    async def async_set_name(self, code: str, name: str) -> bool:
+        """Rename a product, leaving everything else about it alone.
+
+        Unlike saving a mapping, this does not restamp where the product came
+        from - a rename is not a new answer about what it is.
+        """
+        if (resolved := self.resolve(code)) is None:
+            return False
+        if not (name := str(name or "").strip()):
+            return False
+
+        primary, entry = resolved
+        if entry.get("name") == name:
+            return False
+
+        entry["name"] = name
+        entry["updated"] = dt_util.utcnow().isoformat()
+        self._mappings[primary] = entry
+        await self._async_save()
+        return True
+
     async def async_set_department(self, code: str, department: str | None) -> bool:
         """Record which kind of shop a product is bought in."""
         if (resolved := self.resolve(code)) is None:

@@ -180,6 +180,18 @@ class HomeBasketAPI:
         self._manager.async_notify_updated()
         return self.get(created["code"])
 
+    async def async_rename_product(self, code: str, name: str) -> bool:
+        """Rename a product. Returns whether anything changed.
+
+        For the caller that configured it: a shopping list renaming a line it
+        made should rename the product behind it, since that product is what
+        the list handed over in the first place.
+        """
+        changed = await self._manager.store.async_set_name(code, name)
+        if changed:
+            self._manager.async_notify_updated()
+        return changed
+
     async def async_set_photo(self, code: str, photo: str | None) -> bool:
         """Store a picture for a product, or clear it with None.
 
