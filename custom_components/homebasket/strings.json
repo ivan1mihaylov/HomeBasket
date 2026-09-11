@@ -9,12 +9,15 @@
           "use_openfoodfacts": "Look unknown barcodes up on Open Food Facts",
           "add_unknown": "Add unidentified barcodes to the list as-is",
           "language": "Preferred product name language",
-          "event_names": "Scanner events to listen for"
+          "event_names": "Scanner events to listen for",
+          "lists_entry": "HomeBasket Lists list"
         },
         "data_description": {
           "add_unknown": "When off, an unidentified code waits in the card until you name it.",
           "language": "Two letter code, for example bg or en.",
-          "event_names": "Comma separated list of Home Assistant events fired by external scanners."
+          "event_names": "Comma separated list of Home Assistant events fired by external scanners.",
+          "todo_entity": "The to-do entity scanned products are added to. Leave empty when a HomeBasket Lists list is chosen below.",
+          "lists_entry": "Scans go here instead, and scanning the same product again counts one more of it rather than repeating the line. Only shown when HomeBasket Lists is installed."
         }
       }
     },
@@ -31,15 +34,24 @@
           "use_openfoodfacts": "Look unknown barcodes up on Open Food Facts",
           "add_unknown": "Add unidentified barcodes to the list as-is",
           "language": "Preferred product name language",
-          "event_names": "Scanner events to listen for"
+          "event_names": "Scanner events to listen for",
+          "lists_entry": "HomeBasket Lists list"
+        },
+        "data_description": {
+          "todo_entity": "The to-do entity scanned products are added to. Leave empty when a HomeBasket Lists list is chosen below.",
+          "lists_entry": "Scans go here instead, and scanning the same product again counts one more of it rather than repeating the line. Only shown when HomeBasket Lists is installed."
         }
       }
     }
   },
   "entity": {
     "sensor": {
-      "last_scan": { "name": "Last scan" },
-      "known_products": { "name": "Known products" }
+      "last_scan": {
+        "name": "Last scan"
+      },
+      "known_products": {
+        "name": "Known products"
+      }
     }
   }
 }

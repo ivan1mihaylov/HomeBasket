@@ -6,12 +6,18 @@ from typing import Final
 
 DOMAIN: Final = "homebasket"
 
+# The integration HomeBasket Lists publishes its API under. Optional: without
+# it, scans go on the configured to-do entity as they always have.
+LISTS_API: Final = "homebasket_lists_api"
+
 # Where the public API object is published for other integrations.
 DATA_API: Final = "homebasket_api"
 VERSION: Final = "0.1.0"
 
 # Config / options keys
 CONF_TODO_ENTITY: Final = "todo_entity"
+# Which HomeBasket Lists list a scan goes on, when that integration is there.
+CONF_LIST_ENTRY: Final = "lists_entry"
 CONF_USE_OPENFOODFACTS: Final = "use_openfoodfacts"
 CONF_ADD_UNKNOWN: Final = "add_unknown"
 CONF_LANGUAGE: Final = "language"

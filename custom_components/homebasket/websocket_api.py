@@ -102,10 +102,14 @@ async def websocket_save_mapping(
         source=SOURCE_MANUAL,
         **optional,
     )
-    result: dict[str, Any] = {"mapping": entry, "added": False, "already_on_list": False}
+    result: dict[str, Any] = {
+        "mapping": entry,
+        "added": False,
+        "already_on_list": False,
+        "increased": False,
+    }
     if msg["add_to_list"]:
-        added, already = await manager.async_add_to_list(entry["name"])
-        result.update(added=added, already_on_list=already)
+        result.update(await manager.async_add_to_list(entry["name"], code=entry["code"]))
     manager.async_notify_updated()
     connection.send_result(msg["id"], result)
 
@@ -168,7 +172,11 @@ async def websocket_lookup(
 
 
 @ws.websocket_command(
-    {vol.Required("type"): f"{DOMAIN}/list/add", vol.Required("name"): str}
+    {
+        vol.Required("type"): f"{DOMAIN}/list/add",
+        vol.Required("name"): str,
+        vol.Optional("code"): str,
+    }
 )
 @ws.async_response
 async def websocket_add_to_list(
@@ -176,8 +184,8 @@ async def websocket_add_to_list(
 ) -> None:
     """Put an arbitrary name on the shopping list."""
     manager = _manager(hass)
-    added, already = await manager.async_add_to_list(msg["name"])
-    connection.send_result(msg["id"], {"added": added, "already_on_list": already})
+    outcome = await manager.async_add_to_list(msg["name"], code=msg.get("code"))
+    connection.send_result(msg["id"], outcome)
 
 
 @ws.websocket_command({vol.Required("type"): f"{DOMAIN}/list/items"})

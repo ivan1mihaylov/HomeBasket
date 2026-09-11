@@ -45,7 +45,8 @@ Everything is configured in the UI, and can be changed later through
 
 | Option | Meaning |
 | --- | --- |
-| **Shopping list** | The `todo.*` entity scanned products are added to. |
+| **Shopping list** | The `todo.*` entity scanned products are added to. Can be left empty when a HomeBasket Lists list is chosen instead. |
+| **HomeBasket Lists list** | Only shown when [HomeBasket Lists](https://github.com/ivan1mihaylov/HomeBasket-Lists) is installed: scans go on that list instead of the to-do entity. |
 | **Look unknown barcodes up on Open Food Facts** | Turn off to run fully offline. |
 | **Add unidentified barcodes to the list as-is** | Off by default; unidentified codes wait in the card instead of putting a raw number on your list. |
 | **Preferred product name language** | Two letter code, e.g. `bg`. Falls back to the international name. |
@@ -84,6 +85,21 @@ data:
   name: Прясно мляко
   category: Млечни продукти
 ```
+
+## With HomeBasket Lists
+
+HomeBasket works on its own, and so does
+[HomeBasket Lists](https://github.com/ivan1mihaylov/HomeBasket-Lists) — neither
+needs the other installed. When both are there, a scan goes on a HomeBasket
+Lists list rather than a to-do entity, and **scanning the same product again
+counts one more of it** instead of repeating the line: two bottles of milk
+become *мляко, 2 бр.*
+
+The list is picked in HomeBasket's settings. With exactly one list and nothing
+chosen, that one is used. With several and none chosen, the to-do entity is
+used, so nothing changes behind your back. If HomeBasket Lists is removed, or
+is an older version without the door to write through, scans fall back to the
+to-do entity by themselves.
 
 ## Hardware scanners
 
@@ -245,11 +261,13 @@ curl https://your-ha/api/homebasket/product/3800123456789 \
 The barcode dictionary has a test that runs without Home Assistant:
 
 ```bash
-python3 tests/test_store.py
+python3 tests/test_store.py          # what a barcode resolves to
+python3 tests/test_shopping_list.py  # where a scanned product ends up
 ```
 
-It covers what a scan resolves to, including the same label read as UPC-A and
-as EAN-13.
+The first covers the same label read as UPC-A and as EAN-13. The second walks a
+scan onto a to-do list, onto a HomeBasket Lists list, and through every way
+HomeBasket Lists can be missing, old or broken.
 
 ## Credits
 

@@ -15,6 +15,7 @@ from .const import (
     CONF_ADD_UNKNOWN,
     CONF_EVENT_NAMES,
     CONF_LANGUAGE,
+    CONF_LIST_ENTRY,
     CONF_TODO_ENTITY,
     CONF_USE_OPENFOODFACTS,
     DEFAULT_ADD_UNKNOWN,
@@ -24,6 +25,7 @@ from .const import (
     EVENT_CODE_KEYS,
     EVENT_SCANNED,
     EVENT_UPDATED,
+    LISTS_API,
     SIGNAL_UPDATED,
     SOURCE_OPENFOODFACTS,
     STATUS_KNOWN,
@@ -150,6 +152,9 @@ class HomeBasketManager:
             "status": STATUS_UNKNOWN,
             "added": False,
             "already_on_list": False,
+            "increased": False,
+            "quantity": None,
+            "list": None,
             "source": source,
             "timestamp": dt_util.utcnow().isoformat(),
         }
@@ -193,27 +198,95 @@ class HomeBasketManager:
                 result["name"] = code
 
         if add_to_list and result["name"]:
-            added, already = await self.async_add_to_list(result["name"])
-            result["added"] = added
-            result["already_on_list"] = already
+            result.update(
+                await self.async_add_to_list(
+                    result["name"], code=result["product_code"]
+                )
+            )
 
         self.last_scan = result
         self.hass.bus.async_fire(EVENT_SCANNED, result)
         self.async_notify_updated()
         return result
 
-    async def async_add_to_list(self, name: str) -> tuple[bool, bool]:
-        """Add an item to the configured to-do list.
+    @property
+    def lists_api(self) -> Any | None:
+        """Return HomeBasket Lists' API object, when that is installed."""
+        return self.hass.data.get(LISTS_API)
 
-        Returns (added, already_on_list).
+    @property
+    def list_entry(self) -> str | None:
+        """Return which HomeBasket Lists list scans go on, when one was chosen."""
+        return self._option(CONF_LIST_ENTRY, None) or None
+
+    async def async_add_to_list(
+        self, name: str, *, code: str | None = None
+    ) -> dict[str, Any]:
+        """Put a product on the shopping list.
+
+        HomeBasket Lists gets it when that integration is installed and there
+        is a list to put it on - and a second scan of the same thing there
+        means two of it, not two lines saying it. Without HomeBasket Lists,
+        the configured to-do entity gets a line, the way it always has.
+
+        Returns what happened: `added` for a new line, `increased` when the
+        count went up, `already_on_list` when it was there and nothing needed
+        doing.
         """
+        if (outcome := await self._async_add_to_lists(name, code)) is not None:
+            return outcome
+        return await self._async_add_to_todo(name)
+
+    async def _async_add_to_lists(
+        self, name: str, code: str | None
+    ) -> dict[str, Any] | None:
+        """Put a product on a HomeBasket Lists list, if there is one.
+
+        Returns None when that integration is absent, too old to be written
+        to, or has no list this could mean - so the caller falls back.
+        """
+        api = self.lists_api
+        if api is None or not hasattr(api, "async_add_item"):
+            return None
+
+        try:
+            result = await api.async_add_item(
+                name, entry_id=self.list_entry, quantity=1, product_code=code
+            )
+        except Exception:  # noqa: BLE001 - fall back to the to-do list
+            _LOGGER.exception("HomeBasket Lists would not take '%s'", name)
+            return None
+
+        if result is None:
+            # No list of that id, or several lists and none chosen.
+            return None
+
+        increased = bool(result.get("increased"))
+        return {
+            "added": not increased,
+            "increased": increased,
+            "already_on_list": False,
+            "quantity": (result.get("item") or {}).get("quantity"),
+            "list": result.get("list"),
+        }
+
+    async def _async_add_to_todo(self, name: str) -> dict[str, Any]:
+        """Add a line to the configured to-do entity."""
+        nothing = {
+            "added": False,
+            "increased": False,
+            "already_on_list": False,
+            "quantity": None,
+            "list": None,
+        }
+
         entity_id = self.todo_entity
         if not entity_id:
-            _LOGGER.warning("No to-do list configured, '%s' was not added", name)
-            return False, False
+            _LOGGER.warning("No shopping list configured, '%s' was not added", name)
+            return nothing
 
         if name.casefold() in {item.casefold() for item in await self.async_list_items()}:
-            return False, True
+            return {**nothing, "already_on_list": True, "list": entity_id}
 
         try:
             await self.hass.services.async_call(
@@ -225,8 +298,8 @@ class HomeBasketManager:
             )
         except Exception:  # noqa: BLE001 - surfaced to the user, never fatal
             _LOGGER.exception("Failed to add '%s' to %s", name, entity_id)
-            return False, False
-        return True, False
+            return nothing
+        return {**nothing, "added": True, "list": entity_id}
 
     async def async_list_items(self) -> list[str]:
         """Return the open items on the configured to-do list."""

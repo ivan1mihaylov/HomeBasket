@@ -13,9 +13,14 @@ from homeassistant.config_entries import (
     OptionsFlow,
 )
 from homeassistant.core import callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.selector import (
     EntitySelector,
     EntitySelectorConfig,
+    SelectOptionDict,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
     TextSelector,
     TextSelectorConfig,
 )
@@ -24,6 +29,7 @@ from .const import (
     CONF_ADD_UNKNOWN,
     CONF_EVENT_NAMES,
     CONF_LANGUAGE,
+    CONF_LIST_ENTRY,
     CONF_TODO_ENTITY,
     CONF_USE_OPENFOODFACTS,
     DEFAULT_ADD_UNKNOWN,
@@ -31,16 +37,53 @@ from .const import (
     DEFAULT_LANGUAGE,
     DEFAULT_USE_OPENFOODFACTS,
     DOMAIN,
+    LISTS_API,
 )
 
 
-def _schema(defaults: dict[str, Any]) -> vol.Schema:
-    """Build the shared config/options schema."""
+def _lists(hass: HomeAssistant) -> list[dict[str, Any]]:
+    """Return the HomeBasket Lists lists, or nothing when it is not installed."""
+    api = hass.data.get(LISTS_API)
+    if api is None:
+        return []
+    try:
+        return list(api.lists)
+    except Exception:  # noqa: BLE001 - an optional friend, never a blocker
+        return []
+
+
+def _schema(defaults: dict[str, Any], lists: list[dict[str, Any]]) -> vol.Schema:
+    """Build the shared config/options schema.
+
+    The shopping list is a to-do entity, or a HomeBasket Lists list when that
+    integration is installed - the field for it only appears when it is.
+    """
+    fields: dict[Any, Any] = {
+        vol.Optional(
+            CONF_TODO_ENTITY,
+            description={"suggested_value": defaults.get(CONF_TODO_ENTITY)},
+        ): EntitySelector(EntitySelectorConfig(domain="todo")),
+    }
+
+    if lists:
+        fields[
+            vol.Optional(
+                CONF_LIST_ENTRY,
+                description={"suggested_value": defaults.get(CONF_LIST_ENTRY)},
+            )
+        ] = SelectSelector(
+            SelectSelectorConfig(
+                options=[
+                    SelectOptionDict(value=board["entry_id"], label=board["name"])
+                    for board in lists
+                ],
+                mode=SelectSelectorMode.DROPDOWN,
+            )
+        )
+
     return vol.Schema(
         {
-            vol.Required(
-                CONF_TODO_ENTITY, default=defaults.get(CONF_TODO_ENTITY, vol.UNDEFINED)
-            ): EntitySelector(EntitySelectorConfig(domain="todo")),
+            **fields,
             vol.Optional(
                 CONF_USE_OPENFOODFACTS,
                 default=defaults.get(CONF_USE_OPENFOODFACTS, DEFAULT_USE_OPENFOODFACTS),
@@ -93,7 +136,9 @@ class HomeBasketConfigFlow(ConfigFlow, domain=DOMAIN):
                 title="HomeBasket", data=_normalize(user_input)
             )
 
-        return self.async_show_form(step_id="user", data_schema=_schema({}))
+        return self.async_show_form(
+            step_id="user", data_schema=_schema({}, _lists(self.hass))
+        )
 
     @staticmethod
     @callback
@@ -113,4 +158,6 @@ class HomeBasketOptionsFlow(OptionsFlow):
             return self.async_create_entry(data=_normalize(user_input))
 
         defaults = {**self.config_entry.data, **self.config_entry.options}
-        return self.async_show_form(step_id="init", data_schema=_schema(defaults))
+        return self.async_show_form(
+            step_id="init", data_schema=_schema(defaults, _lists(self.hass))
+        )
