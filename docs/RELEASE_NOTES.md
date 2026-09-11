@@ -1,10 +1,12 @@
-The recent scans are kept here now, rather than by whatever did the scanning.
+**A product is what the database that knew it says it is.** Open Food Facts
+means a grocery, Open Pet Food Facts what the cat eats, Open Beauty Facts a
+cosmetic, Open Products Facts a thing — and that is the kind the product keeps
+and hands on to a shopping list.
 
-The card used to remember what it had scanned itself, so a scan made anywhere
-else — a hardware scanner, or the scan button a HomeBasket Lists list now has —
-left no trace in it. Scanning belongs to this integration, and so does the
-record of it: the last eight scans travel with the rest of the state, and the
-card shows them wherever they were made. Dismissing one takes it off that list;
-the product itself stays.
+Products learned before HomeBasket told one from the other had no kind at all,
+and neither did the records cached for them. Both settle themselves now: the
+next scan, or the next time another integration asks what a product is, looks
+it up once and remembers the answer. Nothing lands on a list without a kind
+because of when it was first scanned.
 
-Needs HomeBasket Card 0.9.0 to be seen.
+Best with HomeBasket Lists 0.11.1, which asks for the kind rather than guessing.

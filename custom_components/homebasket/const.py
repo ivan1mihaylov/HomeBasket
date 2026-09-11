@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Final
 
 DOMAIN: Final = "homebasket"
@@ -21,7 +23,6 @@ KINDS: Final = [KIND_FOOD, KIND_BEAUTY, KIND_PETFOOD, KIND_PRODUCT]
 
 # Where the public API object is published for other integrations.
 DATA_API: Final = "homebasket_api"
-VERSION: Final = "0.1.0"
 
 # Config / options keys
 CONF_TODO_ENTITY: Final = "todo_entity"
@@ -92,3 +93,20 @@ ATTR_QUERY: Final = "query"
 ATTR_INCLUDE_DETAILS: Final = "include_details"
 ATTR_INCLUDE_PHOTO: Final = "include_photo"
 ATTR_REFRESH: Final = "refresh"
+
+
+def _installed_version() -> str:
+    """Return the version this integration is installed as.
+
+    It is read from the manifest rather than written down twice, so what the
+    device shows and what the databases are told about the caller are the
+    version that is actually running.
+    """
+    try:
+        manifest = Path(__file__).parent / "manifest.json"
+        return json.loads(manifest.read_text(encoding="utf-8"))["version"]
+    except (OSError, ValueError, KeyError):  # pragma: no cover - never shipped
+        return "0.0.0"
+
+
+VERSION: Final = _installed_version()
