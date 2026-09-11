@@ -109,7 +109,8 @@ class FakeEntry:
 class FakeLists:
     """HomeBasket Lists, holding one list that counts what is on it."""
 
-    def __init__(self, lists=("Пазар",)) -> None:
+    def __init__(self, lists=("Пазар",), mode="count") -> None:
+        self.mode = mode
         self.lists = [
             {"entry_id": f"list{i}", "name": name} for i, name in enumerate(lists)
         ]
@@ -129,10 +130,13 @@ class FakeLists:
         if item is None:
             item = {"summary": summary, "quantity": fields.get("quantity") or 1}
             self.items[summary] = item
-            return {"list": board["name"], "item": item, "increased": False}
+            return {"list": board["name"], "item": item, "outcome": "added"}
+
+        if self.mode == "ignore":
+            return {"list": board["name"], "item": item, "outcome": "kept"}
 
         item["quantity"] += fields.get("quantity") or 1
-        return {"list": board["name"], "item": item, "increased": True}
+        return {"list": board["name"], "item": item, "outcome": "counted"}
 
 
 class Ancient:
@@ -196,6 +200,17 @@ async def main() -> None:
     check("scanning the same product again counts one more", second["increased"], True)
     check("...rather than adding a line", second["added"], False)
     check("...and says how many there are now", second["quantity"], 2)
+
+    # A list set to keep what it has reports that, rather than a new line.
+    todo = FakeTodo()
+    hass = FakeHass(todo)
+    hass.data["homebasket_lists_api"] = FakeLists(mode="ignore")
+    keeping = await manager(hass)
+    await keeping.async_add_to_list("Мляко")
+    again = await keeping.async_add_to_list("Мляко")
+    check("a list that keeps what it has says so", again["already_on_list"], True)
+    check("...and nothing was added", again["added"], False)
+    check("...and nothing was counted", again["increased"], False)
 
     # --- several lists and none chosen -------------------------------------
     todo = FakeTodo()

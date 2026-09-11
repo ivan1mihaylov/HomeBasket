@@ -261,11 +261,15 @@ class HomeBasketManager:
             # No list of that id, or several lists and none chosen.
             return None
 
-        increased = bool(result.get("increased"))
+        # The list says what it did with it: a new line, one more of what was
+        # already there, or nothing because it keeps what it has.
+        outcome = result.get("outcome") or (
+            "counted" if result.get("increased") else "added"
+        )
         return {
-            "added": not increased,
-            "increased": increased,
-            "already_on_list": False,
+            "added": outcome == "added",
+            "increased": outcome == "counted",
+            "already_on_list": outcome == "kept",
             "quantity": (result.get("item") or {}).get("quantity"),
             "list": result.get("list"),
         }

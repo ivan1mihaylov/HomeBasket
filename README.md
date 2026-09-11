@@ -93,7 +93,9 @@ HomeBasket works on its own, and so does
 needs the other installed. When both are there, a scan goes on a HomeBasket
 Lists list rather than a to-do entity, and **scanning the same product again
 counts one more of it** instead of repeating the line: two bottles of milk
-become *мляко, 2 бр.*
+become *мляко, 2 бр.* That is the list's own setting, so a list can be told to
+keep what it has or to write a second line instead; HomeBasket reports whichever
+happened in `added`, `increased` and `already_on_list`.
 
 The list is picked in HomeBasket's settings. With exactly one list and nothing
 chosen, that one is used. With several and none chosen, the to-do entity is
