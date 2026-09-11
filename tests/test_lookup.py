@@ -136,6 +136,11 @@ async def fetch(**answers):
     return await openfoodfacts.async_fetch(None, "123", "en")
 
 
+async def _ready(value):
+    """Hand a value back as something that can be awaited."""
+    return value
+
+
 async def main() -> None:
     found = await fetch(**{**NOWHERE, FOOD_HOST: FOOD})
     check("a grocery is found in Open Food Facts", found["kind"], "food")
@@ -177,6 +182,40 @@ async def main() -> None:
     found = await openfoodfacts.async_fetch(None, "123", "en", kind="product")
     check("a known thing is looked up where it was found", ASKED, [THING_HOST])
     check("...and comes back the same", found["kind"], "product")
+
+    # --- what another integration is told the product is -------------------
+    from homebasket.api import HomeBasketAPI
+
+    asked: list[str] = []
+    cache = {
+        "3800230410016": {"label": "Velingrad water 1.5 l", "kind": "food"},
+        # Cached before HomeBasket told a grocery from a thing.
+        "4008496932504": {"label": "Zewa towels"},
+    }
+
+    async def fetch_details(code):
+        asked.append(code)
+        cache[code] = {"label": cache[code]["label"], "kind": "product"}
+        return cache[code]
+
+    api = HomeBasketAPI(
+        types.SimpleNamespace(
+            details=types.SimpleNamespace(async_get=lambda code: _ready(cache.get(code))),
+            use_openfoodfacts=True,
+            async_fetch_details=fetch_details,
+        )
+    )
+
+    record = await api.async_get_details("3800230410016")
+    check("a record that says what the product is comes from the cache", record["kind"], "food")
+    check("...without asking the databases", asked, [])
+
+    record = await api.async_get_details("4008496932504")
+    check("one cached before kinds existed is looked up again", record["kind"], "product")
+    check("...once", asked, ["4008496932504"])
+
+    record = await api.async_get_details("4008496932504")
+    check("...and not again after that", asked, ["4008496932504"])
 
     print("\nall lookup checks passed")
 

@@ -56,8 +56,9 @@ class HomeBasketAPI:
         """Return every known product.
 
         Each entry carries `code` (the product's first barcode), `codes`
-        (all of them), `name`, `brand`, `category`, `image`, `source`,
-        `scan_count` and `has_photo`.
+        (all of them), `name`, `brand`, `category`, `image`, `kind` - which
+        database knew it, and so whether it is food, pet food, beauty or a
+        thing - `source`, `scan_count` and `has_photo`.
         """
         return [self._decorate(item) for item in self._manager.store.as_list()]
 
@@ -106,12 +107,14 @@ class HomeBasketAPI:
         The cached copy is used unless `refresh` is set, so this is cheap to
         call. Returns None when Open Food Facts does not know the product.
         """
-        if not refresh:
-            if (cached := await self._manager.details.async_get(code)) is not None:
-                return cached
-            if not self._manager.use_openfoodfacts:
-                return None
-        return await self._manager.async_fetch_details(code)
+        cached = None if refresh else await self._manager.details.async_get(code)
+        # A record cached before HomeBasket told a grocery from a thing does
+        # not say which it is. Asking again settles that, once per product.
+        if cached is not None and cached.get("kind"):
+            return cached
+        if not self._manager.use_openfoodfacts:
+            return cached
+        return await self._manager.async_fetch_details(code) or cached
 
     async def async_get_photo(self, code: str) -> str | None:
         """Return the photo stored for a barcode as a data URL, if any.
