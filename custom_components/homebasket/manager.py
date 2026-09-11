@@ -172,12 +172,7 @@ class HomeBasketManager:
 
         if (resolved := self.store.resolve(code)) is not None:
             primary, mapping = resolved
-            kind = mapping.get("kind")
-            if kind is None and self.use_openfoodfacts:
-                # Saved before HomeBasket told a grocery from a thing. One
-                # lookup settles it, and the product keeps the answer, so this
-                # happens once per product and never again.
-                kind = (await self.async_fetch_details(primary) or {}).get("kind")
+            kind = await self.async_kind_of(primary)
             result.update(
                 product_code=primary,
                 name=mapping.get("name"),
@@ -258,6 +253,24 @@ class HomeBasketManager:
         self.async_notify_updated()
         return True
 
+    async def async_kind_of(self, code: str) -> str | None:
+        """Return what a barcode turned out to be, or None for a stranger.
+
+        The kind is the database that knew the barcode: Open Food Facts means
+        a grocery, Open Pet Food Facts what the cat eats, Open Beauty Facts a
+        cosmetic, Open Products Facts a thing. A product saved before
+        HomeBasket told one from the other has none, so it is looked up once
+        and keeps the answer.
+        """
+        if (resolved := self.store.resolve(code)) is None:
+            return None
+
+        primary, mapping = resolved
+        kind = mapping.get("kind")
+        if kind is None and self.use_openfoodfacts:
+            kind = (await self.async_fetch_details(primary) or {}).get("kind")
+        return kind
+
     async def async_add_to_list(
         self, name: str, *, code: str | None = None, kind: str | None = None
     ) -> dict[str, Any]:
@@ -272,6 +285,12 @@ class HomeBasketManager:
         count went up, `already_on_list` when it was there and nothing needed
         doing.
         """
+        # However this product got here - a scan, the card's basket button, a
+        # product just named by hand - it goes on the list as what the
+        # database that knew its barcode says it is.
+        if kind is None and code:
+            kind = await self.async_kind_of(code)
+
         if (outcome := await self._async_add_to_lists(name, code, kind)) is not None:
             return outcome
         return await self._async_add_to_todo(name)

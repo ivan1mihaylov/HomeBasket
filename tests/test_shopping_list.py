@@ -205,6 +205,39 @@ async def main() -> None:
         [None, "beauty", "petfood", "product"],
     )
 
+    # The card's basket button, and saving a product by hand, send a barcode
+    # without saying what it is. The product itself knows, so nothing has to.
+    await paired.store.async_save_mapping("127", "Шампоан", kind="beauty")
+    await paired.async_add_to_list("Шампоан", code="127")
+    check(
+        "a product put on the list by name takes its own kind",
+        lists.calls[-1].get("type"),
+        "beauty",
+    )
+
+    # One saved before HomeBasket told a grocery from a thing is looked up.
+    await paired.store.async_save_mapping("128", "Кисело мляко")
+    asked: list[str] = []
+
+    async def pretend_lookup(code):
+        asked.append(code)
+        await paired.store.async_set_kind(code, "food")
+        return {"kind": "food"}
+
+    paired.async_fetch_details = pretend_lookup
+    await paired.async_add_to_list("Кисело мляко", code="128")
+    check("one with no kind yet is looked up for it", lists.calls[-1].get("type"), "food")
+
+    await paired.async_add_to_list("Кисело мляко", code="128")
+    check("...once, and then it is remembered", asked, ["128"])
+    check("...and it is still a grocery", lists.calls[-1].get("type"), "food")
+
+    check(
+        "a name nobody knows goes on the list without a kind",
+        (await paired.async_add_to_list("Нещо"), lists.calls[-1].get("type"))[1],
+        None,
+    )
+
     second = await paired.async_add_to_list("Мляко", code="123")
     check("scanning the same product again counts one more", second["increased"], True)
     check("...rather than adding a line", second["added"], False)
