@@ -172,13 +172,19 @@ class HomeBasketManager:
 
         if (resolved := self.store.resolve(code)) is not None:
             primary, mapping = resolved
+            kind = mapping.get("kind")
+            if kind is None and self.use_openfoodfacts:
+                # Saved before HomeBasket told a grocery from a thing. One
+                # lookup settles it, and the product keeps the answer, so this
+                # happens once per product and never again.
+                kind = (await self.async_fetch_details(primary) or {}).get("kind")
             result.update(
                 product_code=primary,
                 name=mapping.get("name"),
                 brand=mapping.get("brand"),
                 category=mapping.get("category"),
                 image=mapping.get("image"),
-                kind=mapping.get("kind"),
+                kind=kind,
                 status=STATUS_KNOWN,
             )
             await self.store.async_record_scan(code)

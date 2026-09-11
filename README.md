@@ -18,7 +18,8 @@ Which one knew the barcode is what a product turns out to be: it carries that as
 its **kind**, and the card shows each one the fields it actually has —
 Nutri-Score and nutrition for a yoghurt, ingredients for a shampoo, origin and
 packaging for a lamp. A re-lookup goes straight back to the database that knew
-it.
+it. A product learned before kinds existed gets one the next time it is
+scanned, once, and keeps it.
 
 ```
         scan

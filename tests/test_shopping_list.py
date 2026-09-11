@@ -268,6 +268,31 @@ async def main() -> None:
         False,
     )
 
+    # --- a product saved before HomeBasket knew about kinds ----------------
+    todo = FakeTodo()
+    hass = FakeHass(todo)
+    old_one = await manager(hass)
+    await old_one.store.async_save_mapping("3800011000000", "Velingrad water")
+    check(
+        "a product from before has no kind yet",
+        old_one.store.get("3800011000000").get("kind"),
+        None,
+    )
+
+    # Looking it up gives it one, and the store keeps it.
+    async def pretend_lookup(code):
+        await old_one.store.async_set_kind(code, "food")
+        return {"kind": "food"}
+
+    old_one.async_fetch_details = pretend_lookup
+    scanned = await old_one.async_handle_code("3800011000000", add_to_list=False)
+    check("scanning it settles what it is", scanned["kind"], "food")
+    check(
+        "...and it is remembered, so it is asked only once",
+        old_one.store.get("3800011000000").get("kind"),
+        "food",
+    )
+
     # --- what the card is shown --------------------------------------------
     hass = FakeHass(FakeTodo())
     shelf = await manager(hass)
