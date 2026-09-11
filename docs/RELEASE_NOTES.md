@@ -1,8 +1,8 @@
-`homebasket.add_mapping` can now set **which kind of shop** a product is bought
-in, so an automation can put one where the card can. Leaving it out keeps the
-product where it is, so correcting a name does not move something you placed by
-hand.
+**The integration carries its own icon now.** The basket travels inside the
+integration, in `custom_components/homebasket/brand/`, so Home Assistant shows
+it on the integrations page, in the add dialog and on the device page rather
+than a blank placeholder.
 
-The README has been brought up to date with everything added lately: products
-without a barcode, the shop categories, scanning on an iPhone, and the four
-calls another integration uses to keep products of its own.
+Home Assistant 2026.3 and later serve brand images straight from a custom
+integration and prefer them over the central brands repository, so nothing had
+to be submitted anywhere. Older versions ignore the files and lose nothing.

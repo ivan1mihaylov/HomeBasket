@@ -190,6 +190,14 @@ A shopping list uses this to decide where to remind you: HomeBasket Lists takes
 each category and the zones it is worth a reminder in, so the butcher's is not
 where you are told about shampoo.
 
+## The icon
+
+The basket shown on the integrations page comes with the integration itself, in
+`custom_components/homebasket/brand/`. Home Assistant 2026.3 and later serve it
+from there and prefer it over the central
+[brands repository](https://github.com/home-assistant/brands), so there is
+nothing to submit anywhere; older versions simply ignore the files.
+
 ## Scanning on an iPhone
 
 Chrome, Edge and the Android Companion app read barcodes themselves. Safari —
