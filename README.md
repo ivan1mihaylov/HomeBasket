@@ -165,7 +165,7 @@ one.
 ## Which shop a product is bought in
 
 Every product belongs to a kind of shop, because that is what decides where it
-is worth reminding you about it. There are seven:
+is worth reminding you about it. There are eight:
 
 | Category | Where a scan puts it |
 | --- | --- |
@@ -174,6 +174,7 @@ is worth reminding you about it. There are seven:
 | Greengrocer | — |
 | Butcher | — |
 | Cosmetics | everything Open Beauty Facts knows |
+| Medicines | — |
 | Pet shop | everything Open Pet Food Facts knows |
 | Building supplies | — |
 
