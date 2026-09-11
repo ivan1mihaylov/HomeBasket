@@ -1,11 +1,13 @@
-Scanning a product you already have could create a second one.
+Scans can now go on a [HomeBasket Lists](https://github.com/ivan1mihaylov/HomeBasket-Lists)
+list instead of a to-do entity, and **scanning the same product again counts one
+more of it** rather than repeating the line: two bottles of milk become
+*milk, 2 pcs*. What a repeat means is the list's own setting, so it can be told
+to keep what it has or to write a second line instead; the scan result reports
+which of the three happened in `added`, `increased` and `already_on_list`.
 
-A UPC-A barcode is twelve digits, and the very same label read as EAN-13 comes
-back with a leading zero — which one you get depends on the scanner. A product
-saved from one reading was unknown to the other, so it was looked up on Open
-Food Facts and saved again as a new product.
-
-Both readings now resolve to the one product, everywhere: scanning, editing,
-deleting, attaching a second barcode and counting scans all go through the same
-place. Products that were already split in two can be joined with **Link** on
-the card, as before.
+The list is chosen in HomeBasket's settings, and the field only appears when
+HomeBasket Lists is installed. With exactly one list and nothing chosen, that
+one is used; with several and none chosen, the to-do entity is, so nothing moves
+behind your back. Neither integration needs the other: without HomeBasket Lists
+— or with a version too old to be written to — scans fall back to the to-do
+entity by themselves, which is also why the to-do entity is no longer required.
