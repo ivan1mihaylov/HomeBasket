@@ -1,13 +1,17 @@
-Scans can now go on a [HomeBasket Lists](https://github.com/ivan1mihaylov/HomeBasket-Lists)
-list instead of a to-do entity, and **scanning the same product again counts one
-more of it** rather than repeating the line: two bottles of milk become
-*milk, 2 pcs*. What a repeat means is the list's own setting, so it can be told
-to keep what it has or to write a second line instead; the scan result reports
-which of the three happened in `added`, `increased` and `already_on_list`.
+A barcode is now looked for in the whole Open Food Facts family, in this order:
 
-The list is chosen in HomeBasket's settings, and the field only appears when
-HomeBasket Lists is installed. With exactly one list and nothing chosen, that
-one is used; with several and none chosen, the to-do entity is, so nothing moves
-behind your back. Neither integration needs the other: without HomeBasket Lists
-— or with a version too old to be written to — scans fall back to the to-do
-entity by themselves, which is also why the to-do entity is no longer required.
+| Database | Knows | Kind |
+| --- | --- | --- |
+| [Open Food Facts](https://world.openfoodfacts.org/) | groceries | `food` |
+| [Open Beauty Facts](https://world.openbeautyfacts.org/) | cosmetics | `beauty` |
+| [Open Pet Food Facts](https://world.openpetfoodfacts.org/) | what the cat eats | `petfood` |
+| [Open Products Facts](https://world.openproductsfacts.org/) | everything else | `product` |
+
+Asking stops at the first one that answers, and a re-lookup goes straight back
+to the database that knew the product, so nothing walks the family twice.
+
+Which one knew the barcode is kept on the product as its **kind**, and travels
+with it: the card shows each product the fields it actually has, and a scan that
+lands on a HomeBasket Lists list arrives as the right kind of item rather than
+as whatever the list defaults to. A product named by hand learns its kind the
+first time something looks it up, without its name or source being rewritten.
