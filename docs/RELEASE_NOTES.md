@@ -1,17 +1,10 @@
-A barcode is now looked for in the whole Open Food Facts family, in this order:
+The recent scans are kept here now, rather than by whatever did the scanning.
 
-| Database | Knows | Kind |
-| --- | --- | --- |
-| [Open Food Facts](https://world.openfoodfacts.org/) | groceries | `food` |
-| [Open Beauty Facts](https://world.openbeautyfacts.org/) | cosmetics | `beauty` |
-| [Open Pet Food Facts](https://world.openpetfoodfacts.org/) | what the cat eats | `petfood` |
-| [Open Products Facts](https://world.openproductsfacts.org/) | everything else | `product` |
+The card used to remember what it had scanned itself, so a scan made anywhere
+else — a hardware scanner, or the scan button a HomeBasket Lists list now has —
+left no trace in it. Scanning belongs to this integration, and so does the
+record of it: the last eight scans travel with the rest of the state, and the
+card shows them wherever they were made. Dismissing one takes it off that list;
+the product itself stays.
 
-Asking stops at the first one that answers, and a re-lookup goes straight back
-to the database that knew the product, so nothing walks the family twice.
-
-Which one knew the barcode is kept on the product as its **kind**, and travels
-with it: the card shows each product the fields it actually has, and a scan that
-lands on a HomeBasket Lists list arrives as the right kind of item rather than
-as whatever the list defaults to. A product named by hand learns its kind the
-first time something looks it up, without its name or source being rewritten.
+Needs HomeBasket Card 0.9.0 to be seen.
