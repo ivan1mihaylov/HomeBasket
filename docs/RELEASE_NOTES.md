@@ -1,11 +1,12 @@
-**Every way onto a shopping list carries the kind now, not just a scan.**
+**Scanning with the camera now works on an iPhone.**
 
-A product's kind is the database that knew its barcode — Open Food Facts a
-grocery, Open Pet Food Facts what the cat eats, Open Beauty Facts a cosmetic,
-Open Products Facts a thing. A scan said so, but the card's basket button and
-saving a product by hand sent only a name and a barcode, so those landed on the
-list without a kind at all. The barcode is enough: HomeBasket looks up what the
-product is itself, whichever way it was asked, and a product saved before the
-kinds existed is looked up once and keeps the answer.
+Safari has no barcode reader of its own, so until now the cards could only
+scan there if you found a ZXing build, hosted it yourself and pointed the card
+at it with `zxing_url`. A reader is shipped with the integration now and served
+from your own installation at `/homebasket/zxing.min.js`. The cards load it
+only when the browser has none of its own — Chrome, Edge and the Android
+Companion app never touch it — and nothing is ever fetched from a CDN.
 
-Best with HomeBasket Card 0.9.2 and HomeBasket Lists 0.11.1.
+`zxing_url` still works, for a build of your own.
+
+Needs HomeBasket Card 0.9.4.

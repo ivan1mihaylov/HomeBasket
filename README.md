@@ -144,6 +144,18 @@ used, so nothing changes behind your back. If HomeBasket Lists is removed, or
 is an older version without the door to write through, scans fall back to the
 to-do entity by themselves.
 
+## Scanning on an iPhone
+
+Chrome, Edge and the Android Companion app read barcodes themselves. Safari —
+and therefore every iPhone — cannot, so a reader is shipped with this
+integration and served from your own installation at
+`/homebasket/zxing.min.js`. The cards load it only when the browser has no
+reader of its own, so nothing is ever fetched from a CDN and there is nothing
+to set up. Both cards take a `zxing_url` option for a build of your own.
+
+The reader is [zxing-js/library](https://github.com/zxing-js/library); its
+licence travels with it in `custom_components/homebasket/frontend/`.
+
 ## Hardware scanners
 
 Any scanner that can fire a Home Assistant event works. Fire

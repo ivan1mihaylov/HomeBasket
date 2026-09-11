@@ -41,6 +41,7 @@ from .const import (
 )
 from .details import DetailStore
 from .http_api import async_register_http_api
+from .frontend import async_register_frontend
 from .images import ImageStore
 from .manager import HomeBasketManager
 from .store import MappingStore
@@ -133,6 +134,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _async_register_services(hass)
     websocket_api.async_register(hass)
     async_register_http_api(hass)
+    await async_register_frontend(hass)
 
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     return True
