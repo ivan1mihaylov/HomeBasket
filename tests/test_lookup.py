@@ -1,8 +1,9 @@
 """Checks where a barcode is looked for, without a running Home Assistant.
 
-Open Food Facts knows groceries; Open Products Facts knows everything else. A
-barcode is looked for in both, and which one answered is what tells the two
-apart:
+Open Food Facts knows groceries, Open Beauty Facts cosmetics, Open Pet Food
+Facts what the cat eats, and Open Products Facts everything else. A barcode is
+looked for in all four, and which one answered is what a product turns out to
+be:
 
     python3 tests/test_lookup.py
 """
@@ -52,6 +53,26 @@ FOOD = {
         "image_front_small_url": "https://images.openfoodfacts.org/milk.jpg",
     },
 }
+SHAMPOO = {
+    "status": 1,
+    "product": {
+        "product_name": "Shampoo",
+        "brands": "Nivea",
+        "quantity": "250 ml",
+        "categories": "Hair care, Shampoos",
+        "ingredients_text": "Aqua, Sodium laureth sulfate",
+    },
+}
+KIBBLE = {
+    "status": 1,
+    "product": {
+        "product_name": "Pouch beef loaf",
+        "brands": "Pedigree",
+        "quantity": "100 g",
+        "categories": "Dog food",
+        "nutriments": {"proteins_100g": 8},
+    },
+}
 THING = {
     "status": 1,
     "product": {
@@ -96,7 +117,10 @@ sys.modules["homeassistant.helpers.aiohttp_client"].async_get_clientsession = (
 from homebasket import openfoodfacts  # noqa: E402
 
 FOOD_HOST = "world.openfoodfacts.org"
+BEAUTY_HOST = "world.openbeautyfacts.org"
+PET_HOST = "world.openpetfoodfacts.org"
 THING_HOST = "world.openproductsfacts.org"
+NOWHERE = {FOOD_HOST: NOTHING, BEAUTY_HOST: NOTHING, PET_HOST: NOTHING, THING_HOST: NOTHING}
 
 
 def check(label: str, actual, expected) -> None:
@@ -113,24 +137,38 @@ async def fetch(**answers):
 
 
 async def main() -> None:
-    found = await fetch(**{FOOD_HOST: FOOD, THING_HOST: THING})
+    found = await fetch(**{**NOWHERE, FOOD_HOST: FOOD})
     check("a grocery is found in Open Food Facts", found["kind"], "food")
     check("...and nothing else is asked", ASKED, [FOOD_HOST])
     check("...with the brand in front of the name", found["label"], "Vereya Fresh milk 1 l")
     check("...and its nutrition", found["grades"]["nutriscore"], "b")
     check("...linking to the right site", found["url"], f"https://{FOOD_HOST}/product/123")
 
-    found = await fetch(**{FOOD_HOST: NOTHING, THING_HOST: THING})
-    check("what food does not know is looked for in products", found["kind"], "product")
-    check("...in that order", ASKED, [FOOD_HOST, THING_HOST])
+    found = await fetch(**{**NOWHERE, BEAUTY_HOST: SHAMPOO})
+    check("a cosmetic is found in Open Beauty Facts", found["kind"], "beauty")
+    check("...after food, and no further", ASKED, [FOOD_HOST, BEAUTY_HOST])
+    check("...with its ingredients", found["ingredients"], "Aqua, Sodium laureth sulfate")
+
+    found = await fetch(**{**NOWHERE, PET_HOST: KIBBLE})
+    check("what the cat eats is found in Open Pet Food Facts", found["kind"], "petfood")
+    check("...after the other two", ASKED, [FOOD_HOST, BEAUTY_HOST, PET_HOST])
+    check("...and it has nutrition like any food", len(found["nutriments"]), 1)
+
+    found = await fetch(**{**NOWHERE, THING_HOST: THING})
+    check("everything else is found in Open Products Facts", found["kind"], "product")
+    check("...which is asked last", ASKED, [FOOD_HOST, BEAUTY_HOST, PET_HOST, THING_HOST])
     check("...and it is the thing it found", found["label"], "Sinsay 864GL-82X-ONE")
     check("...with no nutrition to speak of", found["nutriments"], [])
     check("...and no scores", found["grades"]["nutriscore"], None)
     check("...linking to the site that knew it", found["url"], f"https://{THING_HOST}/product/123")
 
-    found = await fetch(**{FOOD_HOST: NOTHING, THING_HOST: NOTHING})
-    check("a barcode neither knows is unknown", found, None)
-    check("...after asking both", ASKED, [FOOD_HOST, THING_HOST])
+    found = await fetch(**NOWHERE)
+    check("a barcode none of them knows is unknown", found, None)
+    check(
+        "...after asking all four",
+        ASKED,
+        [FOOD_HOST, BEAUTY_HOST, PET_HOST, THING_HOST],
+    )
 
     # A re-lookup of something already known goes straight to its database.
     ANSWERS.clear()

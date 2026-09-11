@@ -27,9 +27,8 @@ from .const import (
     EVENT_UPDATED,
     LISTS_API,
     SIGNAL_UPDATED,
-    KIND_PRODUCT,
+    KIND_SOURCES,
     SOURCE_OPENFOODFACTS,
-    SOURCE_OPENPRODUCTSFACTS,
     STATUS_KNOWN,
     STATUS_LOOKED_UP,
     STATUS_UNKNOWN,
@@ -186,10 +185,8 @@ class HomeBasketManager:
                     category=product.get("category"),
                     image=product.get("image"),
                     kind=product.get("kind"),
-                    source=(
-                        SOURCE_OPENPRODUCTSFACTS
-                        if product.get("kind") == KIND_PRODUCT
-                        else SOURCE_OPENFOODFACTS
+                    source=KIND_SOURCES.get(
+                        product.get("kind"), SOURCE_OPENFOODFACTS
                     ),
                 )
                 await self.store.async_record_scan(code)

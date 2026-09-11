@@ -3,15 +3,22 @@
 Scan a barcode, get the product on your Home Assistant shopping list.
 
 HomeBasket keeps a local dictionary of `barcode → product name`. When a code it
-does not know shows up, it asks [Open Food Facts](https://world.openfoodfacts.org/)
-and, for anything that is not a grocery,
-[Open Products Facts](https://world.openproductsfacts.org/) — then remembers the
-answer, so the second scan of the same product is instant and offline.
+does not know shows up, it asks the whole Open Food Facts family — then
+remembers the answer, so the second scan of the same product is instant and
+offline.
 
-Which of the two knew the barcode is what tells a grocery from a thing: a
-product carries that as its **kind**, `food` or `product`, and the card shows
-each one the fields it actually has — Nutri-Score and nutrition for a yoghurt,
-origin and packaging for a lamp.
+| Asked in order | Knows | Kind |
+| --- | --- | --- |
+| [Open Food Facts](https://world.openfoodfacts.org/) | groceries | `food` |
+| [Open Beauty Facts](https://world.openbeautyfacts.org/) | cosmetics | `beauty` |
+| [Open Pet Food Facts](https://world.openpetfoodfacts.org/) | what the cat eats | `petfood` |
+| [Open Products Facts](https://world.openproductsfacts.org/) | everything else | `product` |
+
+Which one knew the barcode is what a product turns out to be: it carries that as
+its **kind**, and the card shows each one the fields it actually has —
+Nutri-Score and nutrition for a yoghurt, ingredients for a shampoo, origin and
+packaging for a lamp. A re-lookup goes straight back to the database that knew
+it.
 
 ```
         scan
@@ -20,8 +27,8 @@ origin and packaging for a lamp.
    known barcode? ──yes──▶ product name ─┐
           │ no                           │
           ▼                              │
-   Open Food Facts ──found──▶ remember ──┤
-   then Open Products Facts               │
+   the Open Food Facts ──found──▶ remember ┤
+   family, in turn                        │
           │ not found                    │
           ▼                              ▼
    waits in the card            shopping list  ──▶  ✅
@@ -66,7 +73,7 @@ Everything is configured in the UI, and can be changed later through
 | --- | --- |
 | **Shopping list** | The `todo.*` entity scanned products are added to. Can be left empty when a HomeBasket Lists list is chosen instead. |
 | **HomeBasket Lists list** | Only shown when [HomeBasket Lists](https://github.com/ivan1mihaylov/HomeBasket-Lists) is installed: scans go on that list instead of the to-do entity. |
-| **Look unknown barcodes up on Open Food Facts** | Off runs fully offline. On, a barcode is looked for in Open Food Facts and then in Open Products Facts. |
+| **Look unknown barcodes up on Open Food Facts** | Off runs fully offline. On, a barcode is looked for in all four databases above, in that order. |
 | **Add unidentified barcodes to the list as-is** | Off by default; unidentified codes wait in the card instead of putting a raw number on your list. |
 | **Preferred product name language** | Two letter code, e.g. `bg`. Falls back to the international name. |
 | **Scanner events to listen for** | Comma separated. Default `barcode_scanned`. |

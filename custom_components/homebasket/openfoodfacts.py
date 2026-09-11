@@ -1,8 +1,8 @@
 """Thin async client for the Open Food Facts family of product APIs.
 
-A barcode is looked for in Open Food Facts first, and in Open Products Facts
-after that - same API, same shape, everything that is not food. Which one
-answered is what tells a grocery from a thing.
+A barcode is looked for in Open Food Facts, then Open Beauty Facts, then Open
+Pet Food Facts, and finally Open Products Facts - the same API and the same
+shape in all four. Which one answered is what a product turns out to be.
 """
 
 from __future__ import annotations
@@ -17,14 +17,16 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import dt as dt_util
 
-from .const import KIND_FOOD, KIND_PRODUCT, VERSION
+from .const import KIND_BEAUTY, KIND_FOOD, KIND_PETFOOD, KIND_PRODUCT, VERSION
 
 _LOGGER = logging.getLogger(__name__)
 
-# The two databases, in the order a barcode is looked for. Groceries are the
-# common case, so they are asked first.
+# The four databases of the Open Food Facts family, in the order a barcode is
+# looked for: the common case first, the catch-all last.
 SITES = {
     KIND_FOOD: "world.openfoodfacts.org",
+    KIND_BEAUTY: "world.openbeautyfacts.org",
+    KIND_PETFOOD: "world.openpetfoodfacts.org",
     KIND_PRODUCT: "world.openproductsfacts.org",
 }
 API_URL = "https://{host}/api/v2/product/{code}.json"

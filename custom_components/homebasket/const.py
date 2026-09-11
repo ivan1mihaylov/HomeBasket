@@ -14,8 +14,10 @@ LISTS_API: Final = "homebasket_lists_api"
 # from Open Products Facts. A product named by hand has neither until it is
 # looked up.
 KIND_FOOD: Final = "food"
+KIND_BEAUTY: Final = "beauty"
+KIND_PETFOOD: Final = "petfood"
 KIND_PRODUCT: Final = "product"
-KINDS: Final = [KIND_FOOD, KIND_PRODUCT]
+KINDS: Final = [KIND_FOOD, KIND_BEAUTY, KIND_PETFOOD, KIND_PRODUCT]
 
 # Where the public API object is published for other integrations.
 DATA_API: Final = "homebasket_api"
@@ -57,7 +59,17 @@ STATUS_UNKNOWN: Final = "unknown"
 # Where a mapping came from
 SOURCE_MANUAL: Final = "manual"
 SOURCE_OPENFOODFACTS: Final = "openfoodfacts"
+SOURCE_OPENBEAUTYFACTS: Final = "openbeautyfacts"
+SOURCE_OPENPETFOODFACTS: Final = "openpetfoodfacts"
 SOURCE_OPENPRODUCTSFACTS: Final = "openproductsfacts"
+
+# Which database a kind came from, for the source stamped on a product.
+KIND_SOURCES: Final = {
+    KIND_FOOD: SOURCE_OPENFOODFACTS,
+    KIND_BEAUTY: SOURCE_OPENBEAUTYFACTS,
+    KIND_PETFOOD: SOURCE_OPENPETFOODFACTS,
+    KIND_PRODUCT: SOURCE_OPENPRODUCTSFACTS,
+}
 SOURCE_IMPORT: Final = "import"
 
 # Services
