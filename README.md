@@ -147,11 +147,12 @@ to-do entity by themselves.
 ## Which shop a product is bought in
 
 Every product belongs to a kind of shop, because that is what decides where it
-is worth reminding you about it. There are six:
+is worth reminding you about it. There are seven:
 
 | Category | Where a scan puts it |
 | --- | --- |
 | Groceries | everything Open Food Facts and Open Products Facts know |
+| Bakery | — |
 | Greengrocer | — |
 | Butcher | — |
 | Cosmetics | everything Open Beauty Facts knows |

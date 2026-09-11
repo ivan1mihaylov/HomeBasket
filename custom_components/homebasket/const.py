@@ -26,6 +26,7 @@ KINDS: Final = [KIND_FOOD, KIND_BEAUTY, KIND_PETFOOD, KIND_PRODUCT]
 # tomato and a shampoo are both "products" to a database, and two different
 # shops to a person.
 DEPARTMENT_GROCERIES: Final = "groceries"
+DEPARTMENT_BAKERY: Final = "bakery"
 DEPARTMENT_PRODUCE: Final = "produce"
 DEPARTMENT_BUTCHER: Final = "butcher"
 DEPARTMENT_COSMETICS: Final = "cosmetics"
@@ -33,6 +34,7 @@ DEPARTMENT_PETS: Final = "pets"
 DEPARTMENT_BUILDING: Final = "building"
 DEPARTMENTS: Final = [
     DEPARTMENT_GROCERIES,
+    DEPARTMENT_BAKERY,
     DEPARTMENT_PRODUCE,
     DEPARTMENT_BUTCHER,
     DEPARTMENT_COSMETICS,
