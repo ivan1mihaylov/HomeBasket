@@ -1,3 +1,5 @@
-The icon's blue is its own now — `#1E9BE0` rather than the blue of the Home
-Assistant logo, which a custom integration should not wear. White on it reads
-better too.
+Nothing about the integration changes in this one.
+
+HACS asks for a release made *after* its validation checks have passed before a
+repository can be listed in it by default. The checks now run here on every
+push; this is the release that follows them.
