@@ -39,6 +39,18 @@ it.
 The dashboard card lives in a separate repository:
 [**HomeBasket-Card**](https://github.com/ivan1mihaylov/HomeBasket-Card).
 
+## The three parts
+
+| | What it is |
+| --- | --- |
+| **HomeBasket** | Scanning, and the products it learns: names, barcodes, pictures, everything the databases know. Everything else reads from here. |
+| **[HomeBasket Card](https://github.com/ivan1mihaylov/HomeBasket-Card)** | Scanning with a phone, for when there is no scanner on a shelf — and the place to look after the products themselves. |
+| **[HomeBasket Lists](https://github.com/ivan1mihaylov/HomeBasket-Lists)** | Shopping lists and tasks, using what HomeBasket knows. |
+
+A scan is a scan wherever it is made — the card, a hardware scanner, the button
+on a list — and it lands in the same place: the product is remembered here, and
+it shows in the card's recent scans either way.
+
 ## Languages
 
 The integration's own interface — setup, options and the names of its entities
@@ -202,6 +214,13 @@ digits, and the very same label read as EAN-13 comes back with a leading zero.
 Which one you get depends on the scanner, so both readings resolve to the same
 product — scanning something you already have opens it instead of creating a
 second copy of it.
+
+## Recent scans
+
+The last few scans are kept by the integration, not by whatever did the
+scanning, so the card shows a scan made anywhere: on the phone, by a hardware
+scanner, or by the scan button on a HomeBasket Lists list. Dismissing one from
+the card takes it off that list; the product itself stays.
 
 ## Product details
 

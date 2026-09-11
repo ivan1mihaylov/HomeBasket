@@ -34,6 +34,8 @@ def _state(manager: HomeBasketManager) -> dict[str, Any]:
     return {
         "mappings": mappings,
         "pending": manager.store.pending_as_list(),
+        # Every recent scan, wherever it was made.
+        "recent": list(manager.recent),
         "last_scan": manager.last_scan,
         "todo_entity": manager.todo_entity,
         "language": manager.language,
@@ -60,6 +62,7 @@ def async_register(hass: HomeAssistant) -> None:
         websocket_delete_photo,
         websocket_details,
         websocket_dismiss_pending,
+        websocket_dismiss_recent,
         websocket_link_code,
         websocket_unlink_code,
     ):
@@ -288,8 +291,23 @@ async def websocket_dismiss_pending(
     """Forget that a code was scanned, without touching any product."""
     manager = _manager(hass)
     removed = await manager.store.async_remove_pending(msg["code"])
+    await manager.async_forget_scan(msg["code"])
     manager.async_notify_updated()
     connection.send_result(msg["id"], {"removed": removed})
+
+
+@ws.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/recent/dismiss", vol.Required("code"): str}
+)
+@ws.async_response
+async def websocket_dismiss_recent(
+    hass: HomeAssistant, connection: ws.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Take one scan off the recent list. The product itself is untouched."""
+    manager = _manager(hass)
+    connection.send_result(
+        msg["id"], {"removed": await manager.async_forget_scan(msg["code"])}
+    )
 
 
 @ws.websocket_command(

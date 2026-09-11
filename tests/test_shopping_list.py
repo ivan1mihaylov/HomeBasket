@@ -268,6 +268,23 @@ async def main() -> None:
         False,
     )
 
+    # --- what the card is shown --------------------------------------------
+    hass = FakeHass(FakeTodo())
+    shelf = await manager(hass)
+    shelf.remember_scan({"code": "1", "name": "Milk"})
+    shelf.remember_scan({"code": "2", "name": "Bread"})
+    shelf.remember_scan({"code": "1", "name": "Milk"})
+    check("a scan goes to the front of the recent list", [s["code"] for s in shelf.recent], ["1", "2"])
+    check("...listed once per barcode", len(shelf.recent), 2)
+
+    check("a scan can be dismissed", await shelf.async_forget_scan("1"), True)
+    check("...and only once", await shelf.async_forget_scan("1"), False)
+    check("...leaving the others", [s["code"] for s in shelf.recent], ["2"])
+
+    for index in range(12):
+        shelf.remember_scan({"code": f"code{index}", "name": "x"})
+    check("the list does not grow forever", len(shelf.recent), 8)
+
     print("\nall shopping list checks passed")
 
 

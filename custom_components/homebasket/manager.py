@@ -39,6 +39,11 @@ from .store import MappingStore, normalize_code
 
 _LOGGER = logging.getLogger(__name__)
 
+# How many recent scans are kept for the card to show. They live here rather
+# than in the card, so a scan made anywhere - the phone, a hardware scanner, a
+# shopping list - shows up wherever someone is looking.
+RECENT_LIMIT = 8
+
 
 class HomeBasketManager:
     """Owns the mapping store and turns scanned codes into shopping list items."""
@@ -58,6 +63,7 @@ class HomeBasketManager:
         self.images = images
         self.details = details
         self.last_scan: dict[str, Any] | None = None
+        self.recent: list[dict[str, Any]] = []
         self._unsubscribes: list[Any] = []
 
     # ------------------------------------------------------------------
@@ -212,6 +218,7 @@ class HomeBasketManager:
             )
 
         self.last_scan = result
+        self.remember_scan(result)
         self.hass.bus.async_fire(EVENT_SCANNED, result)
         self.async_notify_updated()
         return result
@@ -225,6 +232,25 @@ class HomeBasketManager:
     def list_entry(self) -> str | None:
         """Return which HomeBasket Lists list scans go on, when one was chosen."""
         return self._option(CONF_LIST_ENTRY, None) or None
+
+    def remember_scan(self, result: dict[str, Any]) -> None:
+        """Put a scan at the front of the recent list, once per barcode."""
+        code = result.get("code")
+        self.recent = [
+            result,
+            *(item for item in self.recent if item.get("code") != code),
+        ][:RECENT_LIMIT]
+
+    async def async_forget_scan(self, code: str) -> bool:
+        """Drop one scan from the recent list. The product itself stays."""
+        code = normalize_code(code)
+        kept = [item for item in self.recent if item.get("code") != code]
+        if len(kept) == len(self.recent):
+            return False
+
+        self.recent = kept
+        self.async_notify_updated()
+        return True
 
     async def async_add_to_list(
         self, name: str, *, code: str | None = None, kind: str | None = None
