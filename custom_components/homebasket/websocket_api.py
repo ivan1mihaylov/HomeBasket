@@ -10,7 +10,7 @@ from homeassistant.components import websocket_api as ws
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 
-from .const import DOMAIN, SOURCE_MANUAL
+from .const import DEPARTMENTS, DOMAIN, KIND_DEPARTMENTS, SOURCE_MANUAL
 from .images import InvalidImage
 from .manager import HomeBasketManager
 
@@ -28,7 +28,14 @@ def _manager(hass: HomeAssistant) -> HomeBasketManager:
 def _state(manager: HomeBasketManager) -> dict[str, Any]:
     """Return the payload the card renders itself from."""
     mappings = [
-        {**item, "has_photo": manager.images.has(item["code"])}
+        {
+            **item,
+            # A product from before shops were told apart still belongs to the
+            # one its database implies.
+            "department": item.get("department")
+            or KIND_DEPARTMENTS.get(item.get("kind")),
+            "has_photo": manager.images.has(item["code"]),
+        }
         for item in manager.store.as_list()
     ]
     return {
@@ -39,6 +46,9 @@ def _state(manager: HomeBasketManager) -> dict[str, Any]:
         "last_scan": manager.last_scan,
         "todo_entity": manager.todo_entity,
         "language": manager.language,
+        # The kinds of shop a product can belong to, so the card need not
+        # keep its own copy of the list.
+        "departments": DEPARTMENTS,
     }
 
 
@@ -86,6 +96,7 @@ async def websocket_get_state(
         vol.Optional("brand"): vol.Any(str, None),
         vol.Optional("category"): vol.Any(str, None),
         vol.Optional("image"): vol.Any(str, None),
+        vol.Optional("department"): vol.Any(vol.In(DEPARTMENTS), None),
         vol.Optional("add_to_list", default=False): bool,
     }
 )
@@ -97,7 +108,9 @@ async def websocket_save_mapping(
     manager = _manager(hass)
     # Only the fields the card actually sent are touched, so an omitted key
     # keeps its stored value while an explicit null clears it.
-    optional = {key: msg[key] for key in ("category", "image") if key in msg}
+    optional = {
+        key: msg[key] for key in ("category", "image", "department") if key in msg
+    }
     entry = await manager.store.async_save_mapping(
         msg["code"],
         msg["name"],

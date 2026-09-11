@@ -27,6 +27,7 @@ from .const import (
     EVENT_UPDATED,
     LISTS_API,
     SIGNAL_UPDATED,
+    KIND_DEPARTMENTS,
     KIND_SOURCES,
     SOURCE_OPENFOODFACTS,
     STATUS_KNOWN,
@@ -291,12 +292,31 @@ class HomeBasketManager:
         if kind is None and code:
             kind = await self.async_kind_of(code)
 
-        if (outcome := await self._async_add_to_lists(name, code, kind)) is not None:
+        shop = self.department_of(code) if code else None
+        if (
+            outcome := await self._async_add_to_lists(name, code, kind, shop)
+        ) is not None:
             return outcome
         return await self._async_add_to_todo(name)
 
+    def department_of(self, code: str) -> str | None:
+        """Return which kind of shop a product is bought in.
+
+        The product's own answer when it has one, and otherwise the shop its
+        database implies - Open Pet Food Facts means the pet shop, the rest of
+        them a supermarket until someone says otherwise.
+        """
+        if (resolved := self.store.resolve(code)) is None:
+            return None
+        _, mapping = resolved
+        return mapping.get("department") or KIND_DEPARTMENTS.get(mapping.get("kind"))
+
     async def _async_add_to_lists(
-        self, name: str, code: str | None, kind: str | None = None
+        self,
+        name: str,
+        code: str | None,
+        kind: str | None = None,
+        department: str | None = None,
     ) -> dict[str, Any] | None:
         """Put a product on a HomeBasket Lists list, if there is one.
 
@@ -315,6 +335,8 @@ class HomeBasketManager:
                 product_code=code,
                 # A grocery lands on the list as a grocery; a thing as a thing.
                 type=kind,
+                # And in the aisle of the shop it is bought in.
+                department=department,
             )
         except Exception:  # noqa: BLE001 - fall back to the to-do list
             _LOGGER.exception("HomeBasket Lists would not take '%s'", name)

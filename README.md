@@ -144,6 +144,29 @@ used, so nothing changes behind your back. If HomeBasket Lists is removed, or
 is an older version without the door to write through, scans fall back to the
 to-do entity by themselves.
 
+## Which shop a product is bought in
+
+Every product belongs to a kind of shop, because that is what decides where it
+is worth reminding you about it. There are six:
+
+| Category | Where a scan puts it |
+| --- | --- |
+| Groceries | everything Open Food Facts and Open Products Facts know |
+| Greengrocer | — |
+| Butcher | — |
+| Cosmetics | everything Open Beauty Facts knows |
+| Pet shop | everything Open Pet Food Facts knows |
+| Building supplies | — |
+
+The database that knew the barcode decides where a product starts; the ones
+with no default are for the things you add yourself. Any product can be moved
+afterwards in its sheet in the card, and it stays where it is put however often
+it is looked up again.
+
+A shopping list uses this to decide where to remind you: HomeBasket Lists takes
+each category and the zones it is worth a reminder in, so the butcher's is not
+where you are told about shampoo.
+
 ## Scanning on an iPhone
 
 Chrome, Edge and the Android Companion app read barcodes themselves. Safari —

@@ -19,6 +19,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from .const import KIND_DEPARTMENTS
+
 if TYPE_CHECKING:
     from .manager import HomeBasketManager
 
@@ -58,7 +60,8 @@ class HomeBasketAPI:
         Each entry carries `code` (the product's first barcode), `codes`
         (all of them), `name`, `brand`, `category`, `image`, `kind` - which
         database knew it, and so whether it is food, pet food, beauty or a
-        thing - `source`, `scan_count` and `has_photo`.
+        thing - `department`, the kind of shop it is bought in, `source`,
+        `scan_count` and `has_photo`.
         """
         return [self._decorate(item) for item in self._manager.store.as_list()]
 
@@ -94,7 +97,14 @@ class HomeBasketAPI:
         ]
 
     def _decorate(self, item: dict[str, Any]) -> dict[str, Any]:
-        return {**item, "has_photo": self._manager.images.has(item["code"])}
+        return {
+            **item,
+            # A product from before shops were told apart has no department of
+            # its own; the database that knew it still implies one.
+            "department": item.get("department")
+            or KIND_DEPARTMENTS.get(item.get("kind")),
+            "has_photo": self._manager.images.has(item["code"]),
+        }
 
     # ------------------------------------------------------------------
     # Extras that need to be read from disk or the network
@@ -123,6 +133,17 @@ class HomeBasketAPI:
         product is a remote Open Food Facts URL and needs no call.
         """
         return await self._manager.images.async_get(code)
+
+    async def async_set_department(self, code: str, department: str | None) -> bool:
+        """Say which kind of shop a product is bought in.
+
+        One of `DEPARTMENTS`, or None to fall back to what its database
+        implies. Returns whether anything changed.
+        """
+        changed = await self._manager.store.async_set_department(code, department)
+        if changed:
+            self._manager.async_notify_updated()
+        return changed
 
     async def async_resolve(
         self, code: str, *, add_to_list: bool = False, source: str = "api"

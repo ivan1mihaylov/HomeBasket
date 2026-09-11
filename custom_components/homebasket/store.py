@@ -8,7 +8,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
-from .const import SOURCE_IMPORT, SOURCE_MANUAL, STORAGE_KEY, STORAGE_VERSION
+from .const import (
+    KIND_DEPARTMENTS,
+    SOURCE_IMPORT,
+    SOURCE_MANUAL,
+    STORAGE_KEY,
+    STORAGE_VERSION,
+)
 
 # Sentinel for "leave this field as it is", so that passing None can mean
 # "clear this field" - the card needs both.
@@ -126,6 +132,7 @@ class MappingStore:
         category: str | None | object = KEEP,
         image: str | None | object = KEEP,
         kind: str | None | object = KEEP,
+        department: str | None | object = KEEP,
         source: str = SOURCE_MANUAL,
     ) -> dict[str, Any]:
         """Create or update a product and drop the code from the pending list."""
@@ -142,16 +149,34 @@ class MappingStore:
             "image": existing.get("image") if image is KEEP else image,
             # Food or not, as far as the databases are concerned.
             "kind": existing.get("kind") if kind is KEEP else kind,
+            # Which kind of shop it is bought in.
+            "department": (
+                existing.get("department") if department is KEEP else department
+            ),
             "source": source,
             "created": existing.get("created", now),
             "updated": now,
             "scan_count": existing.get("scan_count", 0),
         }
+        _default_department(entry)
         self._mappings[code] = entry
         self._pending.pop(code, None)
         self._pending.pop(scanned, None)
         await self._async_save()
         return {"code": code, "codes": self.codes_for(code), **entry}
+
+    async def async_set_department(self, code: str, department: str | None) -> bool:
+        """Record which kind of shop a product is bought in."""
+        if (resolved := self.resolve(code)) is None:
+            return False
+        primary, entry = resolved
+        if entry.get("department") == department:
+            return False
+
+        entry["department"] = department
+        self._mappings[primary] = entry
+        await self._async_save()
+        return True
 
     async def async_set_kind(self, code: str, kind: str | None) -> bool:
         """Record what a product turned out to be, leaving the rest alone.
@@ -166,6 +191,7 @@ class MappingStore:
             return False
 
         entry["kind"] = kind
+        _default_department(entry)
         self._mappings[primary] = entry
         await self._async_save()
         return True
@@ -295,3 +321,13 @@ class MappingStore:
         if imported:
             await self._async_save()
         return imported
+
+
+def _default_department(entry: dict[str, Any]) -> None:
+    """Give a product the shop its database implies, when it has none.
+
+    Only when nothing was chosen: a product moved to the butcher's by hand
+    stays there however often it is looked up again.
+    """
+    if not entry.get("department") and entry.get("kind"):
+        entry["department"] = KIND_DEPARTMENTS.get(entry["kind"])

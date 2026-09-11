@@ -21,6 +21,36 @@ KIND_PETFOOD: Final = "petfood"
 KIND_PRODUCT: Final = "product"
 KINDS: Final = [KIND_FOOD, KIND_BEAUTY, KIND_PETFOOD, KIND_PRODUCT]
 
+# Which kind of shop a product is bought in. A kind says which database knew
+# the barcode; this says where you go for it, which is not the same thing - a
+# tomato and a shampoo are both "products" to a database, and two different
+# shops to a person.
+DEPARTMENT_GROCERIES: Final = "groceries"
+DEPARTMENT_PRODUCE: Final = "produce"
+DEPARTMENT_BUTCHER: Final = "butcher"
+DEPARTMENT_COSMETICS: Final = "cosmetics"
+DEPARTMENT_PETS: Final = "pets"
+DEPARTMENT_BUILDING: Final = "building"
+DEPARTMENTS: Final = [
+    DEPARTMENT_GROCERIES,
+    DEPARTMENT_PRODUCE,
+    DEPARTMENT_BUTCHER,
+    DEPARTMENT_COSMETICS,
+    DEPARTMENT_PETS,
+    DEPARTMENT_BUILDING,
+]
+
+# What the database that knew a barcode says about where to buy it. Groceries
+# and things alike start as groceries - a supermarket sells both - while the
+# two databases that are about one thing say exactly which shop that is. Any
+# of it can be changed afterwards; this is only where a product starts.
+KIND_DEPARTMENTS: Final = {
+    KIND_FOOD: DEPARTMENT_GROCERIES,
+    KIND_PRODUCT: DEPARTMENT_GROCERIES,
+    KIND_PETFOOD: DEPARTMENT_PETS,
+    KIND_BEAUTY: DEPARTMENT_COSMETICS,
+}
+
 # Where the public API object is published for other integrations.
 DATA_API: Final = "homebasket_api"
 

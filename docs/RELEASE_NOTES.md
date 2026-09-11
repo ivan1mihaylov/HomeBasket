@@ -1,12 +1,15 @@
-**Scanning with the camera now works on an iPhone.**
+**A product now belongs to a kind of shop.** Groceries, greengrocer, butcher,
+cosmetics, pet shop, building supplies — because where you buy something is
+what decides where it is worth reminding you about it.
 
-Safari has no barcode reader of its own, so until now the cards could only
-scan there if you found a ZXing build, hosted it yourself and pointed the card
-at it with `zxing_url`. A reader is shipped with the integration now and served
-from your own installation at `/homebasket/zxing.min.js`. The cards load it
-only when the browser has none of its own — Chrome, Edge and the Android
-Companion app never touch it — and nothing is ever fetched from a CDN.
+A scan sets it from the database that knew the barcode: Open Food Facts and
+Open Products Facts mean groceries, Open Beauty Facts the chemist's, Open Pet
+Food Facts the pet shop. The other three are for what you add yourself. A
+product can be moved in its sheet in the card, and it stays where it is put
+however often it is looked up again — products learned before any of this keep
+the shop their database implies until you say otherwise.
 
-`zxing_url` still works, for a build of your own.
+It travels with the product onto a shopping list, where HomeBasket Lists 0.12.0
+can tie each category to the zones it is worth a reminder in.
 
-Needs HomeBasket Card 0.9.4.
+Best with HomeBasket Card 0.10.0, which is where a product is moved.

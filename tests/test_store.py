@@ -125,6 +125,33 @@ async def main() -> None:
     await linked.async_add_alias(EAN, "111")
     check("an attached barcode resolves to its product", linked.resolve(UPC)[0], "111")
 
+    # --- which kind of shop a product is bought in -------------------------
+    # The database that knew the barcode says where you go for it: a
+    # supermarket for groceries and things alike, the pet shop for what the cat
+    # eats, the chemist's for a shampoo.
+    shops = await store()
+    for code, name, kind, expected in (
+        ("1", "Мляко", "food", "groceries"),
+        ("2", "Лампа", "product", "groceries"),
+        ("3", "Котешка храна", "petfood", "pets"),
+        ("4", "Шампоан", "beauty", "cosmetics"),
+    ):
+        await shops.async_save_mapping(code, name, kind=kind)
+        check(f"{kind} is bought at the {expected}", shops.get(code)["department"], expected)
+
+    # Moved by hand, and it stays moved however often it is looked up again.
+    await shops.async_set_department("1", "produce")
+    check("a product can be moved", shops.get("1")["department"], "produce")
+    await shops.async_save_mapping("1", "Мляко", kind="food")
+    check("...and stays where it was put", shops.get("1")["department"], "produce")
+
+    # One saved before any of this had no kind either; the lookup that gives it
+    # one gives it a shop too.
+    await shops.async_save_mapping("5", "Хляб")
+    check("a product with no kind has no shop yet", shops.get("5").get("department"), None)
+    await shops.async_set_kind("5", "food")
+    check("...and learns both at once", shops.get("5")["department"], "groceries")
+
     print("\nall barcode checks passed")
 
 

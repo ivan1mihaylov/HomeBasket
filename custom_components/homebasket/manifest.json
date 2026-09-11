@@ -15,5 +15,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/ivan1mihaylov/HomeBasket/issues",
   "requirements": [],
-  "version": "0.9.3"
+  "version": "0.10.0"
 }
