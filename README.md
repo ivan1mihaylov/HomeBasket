@@ -1,3 +1,5 @@
+<img src="docs/icon.png" alt="HomeBasket" width="96" align="right">
+
 # HomeBasket
 
 Scan a barcode, get the product on your Home Assistant shopping list.
