@@ -1,4 +1,8 @@
-The eighth kind of shop is called **the pharmacy** now, rather than medicines —
-the rest of them are named after the shop you go to, and this one was not.
+`homebasket.add_mapping` can now set **which kind of shop** a product is bought
+in, so an automation can put one where the card can. Leaving it out keeps the
+product where it is, so correcting a name does not move something you placed by
+hand.
 
-Only the name on screen changed. Anything already put there stays where it is.
+The README has been brought up to date with everything added lately: products
+without a barcode, the shop categories, scanning on an iPhone, and the four
+calls another integration uses to keep products of its own.

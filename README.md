@@ -103,7 +103,7 @@ Everything is configured in the UI, and can be changed later through
 | Action | What it does |
 | --- | --- |
 | `homebasket.scan` | Full pipeline: resolve the code and add it to the list. |
-| `homebasket.add_mapping` | Teach HomeBasket a `barcode → product` pair, optionally with a category. |
+| `homebasket.add_mapping` | Teach HomeBasket a `barcode → product` pair, optionally with a category and the kind of shop it is bought in. |
 | `homebasket.remove_mapping` | Forget a barcode. |
 | `homebasket.lookup` | Query Open Food Facts without changing anything. |
 | `homebasket.import_mappings` | Import a JSON barcode dictionary (see below). |
@@ -125,6 +125,7 @@ data:
   code: "3800123456789"
   name: Fresh milk
   category: Dairy
+  department: groceries
 ```
 
 ## With HomeBasket Lists
@@ -301,6 +302,9 @@ Those photos are kept in Home Assistant's own storage
 WebSocket API, so they are never exposed on a public path the way files in
 `www/` are. Forgetting a product deletes its photo with it.
 
+A photo put on something to buy on a HomeBasket Lists list arrives here the same
+way, so it is the product's picture from then on, wherever the product turns up.
+
 ## Using HomeBasket from another integration
 
 HomeBasket publishes what it knows so other custom integrations, scripts and
@@ -318,7 +322,7 @@ if api is None:
     return  # HomeBasket is not installed or not set up yet
 
 for product in api.products:
-    print(product["code"], product["name"], product["category"])
+    print(product["code"], product["name"], product["kind"], product["department"])
 
 milk = api.get("3800123456789")
 details = await api.async_get_details("3800123456789")   # cached, no network
@@ -328,9 +332,9 @@ photo = await api.async_get_photo("3800123456789")       # data URL, or None
 | Member | Returns |
 | --- | --- |
 | `api_version` | `1` today. Check it before relying on the shape. |
-| `products` | Every product: `code`, `name`, `brand`, `category`, `image`, `kind`, `source`, `scan_count`, `has_photo`. |
+| `products` | Every product: `code`, `codes`, `name`, `brand`, `category`, `image`, `kind`, `department`, `source`, `scan_count`, `has_photo`. |
 | `pending` | Scanned codes that could not be identified. |
-| `get(code)` | One product, or `None`. |
+| `get(code)` | One product, or `None`. Any of its barcodes returns the same one. |
 | `find(text)` | Products matching a name, brand, category or code. |
 | `await async_get_details(code, refresh=False)` | The full Open Food Facts record from the cache; `refresh=True` re-queries. |
 | `await async_get_photo(code)` | A user photo as a data URL, or `None`. `image` on a product is a remote URL and needs no call. |
@@ -340,6 +344,36 @@ photo = await api.async_get_photo("3800123456789")       # data URL, or None
 
 Everything returned is a copy, so a consumer cannot corrupt the stored data.
 Listen for the `homebasket_updated` event to know when to re-read.
+
+Four more members write rather than read. They exist for an integration that
+configures products of its own — which is what HomeBasket Lists does with what
+you set on a list:
+
+```python
+milk = await api.async_remember_product(
+    "Milk",                    # a product of that name here is the answer
+    department="groceries",    # optional
+    photo=data_url,            # optional
+)
+code = milk["code"]            # "local:milk" - a key, not a barcode
+
+await api.async_rename_product(code, "Fresh milk 3.6%")
+await api.async_set_department(code, "bakery")
+await api.async_set_photo(code, data_url)      # None clears it
+await api.async_link_code("3800123456789", code)   # give it a real barcode
+```
+
+| Member | Does |
+| --- | --- |
+| `await async_remember_product(name, department=…, category=…, image=…, kind=…, photo=…)` | Returns the product of that name, creating one without a barcode if there is none. What it already says is kept; only what is empty is filled in. |
+| `await async_rename_product(code, name)` | Renames it, leaving what it is and where it came from alone. |
+| `await async_set_department(code, department)` | Moves it to another kind of shop, or `None` to fall back to what its database implies. |
+| `await async_set_photo(code, photo)` | Stores a photo as a data URL, or clears it with `None`. |
+| `await async_link_code(code, product)` | Attaches another barcode — including the first real one — to a product. |
+
+A product with no barcode is keyed `local:…`. That is not a barcode and is
+never shown as one; ask the databases about it and you are asking about
+nothing.
 
 ### From an automation or a script
 
@@ -369,7 +403,7 @@ curl https://your-ha/api/homebasket/product/3800123456789 \
 The barcode dictionary has a test that runs without Home Assistant:
 
 ```bash
-python3 tests/test_store.py          # what a barcode resolves to
+python3 tests/test_store.py          # what a barcode resolves to, and products without one
 python3 tests/test_lookup.py         # which database a barcode is looked for in
 python3 tests/test_shopping_list.py  # where a scanned product ends up
 ```

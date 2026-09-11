@@ -96,6 +96,25 @@ add_mapping:
       example: Млечни продукти
       selector:
         text:
+    department:
+      name: Shop category
+      description: >-
+        Which kind of shop it is bought in. Left as it is when not given, so
+        correcting a name does not move a product someone put somewhere by
+        hand.
+      required: false
+      example: groceries
+      selector:
+        select:
+          options:
+            - groceries
+            - bakery
+            - produce
+            - butcher
+            - cosmetics
+            - medicines
+            - pets
+            - building
 
 remove_mapping:
   name: Remove product mapping

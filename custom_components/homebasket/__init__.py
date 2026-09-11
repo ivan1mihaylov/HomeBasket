@@ -21,6 +21,7 @@ from .const import (
     ATTR_BRAND,
     ATTR_CATEGORY,
     ATTR_CODE,
+    ATTR_DEPARTMENT,
     ATTR_INCLUDE_DETAILS,
     ATTR_INCLUDE_PHOTO,
     ATTR_NAME,
@@ -29,6 +30,7 @@ from .const import (
     ATTR_QUERY,
     ATTR_REFRESH,
     DATA_API,
+    DEPARTMENTS,
     DOMAIN,
     SERVICE_ADD_MAPPING,
     SERVICE_GET_PRODUCT,
@@ -44,7 +46,7 @@ from .http_api import async_register_http_api
 from .frontend import async_register_frontend
 from .images import ImageStore
 from .manager import HomeBasketManager
-from .store import MappingStore
+from .store import KEEP, MappingStore
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -64,6 +66,7 @@ ADD_MAPPING_SCHEMA = CODE_SCHEMA.extend(
         **{vol.Optional(key): cv.string for key in NAME_KEYS},
         vol.Optional(ATTR_BRAND): cv.string,
         vol.Optional(ATTR_CATEGORY): cv.string,
+        vol.Optional(ATTR_DEPARTMENT): vol.In(DEPARTMENTS),
     }
 )
 
@@ -191,6 +194,10 @@ def _async_register_services(hass: HomeAssistant) -> None:
             name,
             brand=call.data.get(ATTR_BRAND),
             category=call.data.get(ATTR_CATEGORY),
+            # Left alone when the call says nothing, so a product moved to
+            # another shop by hand is not sent back by an automation that only
+            # meant to correct its name.
+            department=call.data.get(ATTR_DEPARTMENT, KEEP),
             source=SOURCE_MANUAL,
         )
         manager.async_notify_updated()
