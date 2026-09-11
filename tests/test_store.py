@@ -52,7 +52,7 @@ _package = types.ModuleType("homebasket")
 _package.__path__ = [str(_COMPONENT)]
 sys.modules["homebasket"] = _package
 
-from homebasket.store import MappingStore, code_variants  # noqa: E402
+from homebasket.store import MappingStore, code_variants, is_local  # noqa: E402
 
 # The same physical label, read as UPC-A and as EAN-13.
 UPC = "012345678905"
@@ -151,6 +151,29 @@ async def main() -> None:
     check("a product with no kind has no shop yet", shops.get("5").get("department"), None)
     await shops.async_set_kind("5", "food")
     check("...and learns both at once", shops.get("5")["department"], "groceries")
+
+    # --- a product with no barcode -----------------------------------------
+    # A shopping list configures things that were never scanned; they are kept
+    # under a key of their own until someone gives them a barcode.
+    loose = await store()
+    milk = await loose.async_create_local("Мляко", department="groceries", source="list")
+    check("a product can be kept without a barcode", milk["code"].startswith("local:"), True)
+    check("...with what was configured for it", milk["department"], "groceries")
+    check("...and it is found by name", loose.find_by_name("мляко")[0], milk["code"])
+    check("...only by exactly that name", loose.find_by_name("мля"), None)
+
+    second = await loose.async_create_local("Мляко")
+    check("two things of the same name get their own keys", second["code"] != milk["code"], True)
+
+    # A barcode given to it later behaves like any other barcode of a product.
+    await loose.async_add_alias("3800024911001", milk["code"])
+    check("scanning the barcode finds it", loose.resolve("3800024911001")[0], milk["code"])
+    check("...and the name comes with it", loose.get("3800024911001")["name"], "Мляко")
+    check(
+        "...while its own key is not a barcode",
+        [code for code in loose.codes_for(milk["code"]) if not is_local(code)],
+        ["3800024911001"],
+    )
 
     print("\nall barcode checks passed")
 

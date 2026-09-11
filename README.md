@@ -144,6 +144,23 @@ used, so nothing changes behind your back. If HomeBasket Lists is removed, or
 is an older version without the door to write through, scans fall back to the
 to-do entity by themselves.
 
+## Products without a barcode
+
+Not everything you buy has a barcode you ever scan — bread from the bakery,
+tomatoes, a line someone typed on a shopping list. HomeBasket keeps those too,
+under a key of its own rather than a barcode, and the card shows them as **No
+barcode**.
+
+They arrive on their own: whenever something to buy is configured on a
+HomeBasket Lists list — its name, its picture, the kind of shop it comes from —
+the list hands it over, so the next time you start typing that name anywhere,
+it is offered with everything it already knows.
+
+A product's sheet has a field to **attach a barcode by hand**. Type one in and
+it belongs to that product from then on, so scanning it finds the name, the
+picture and the shop you already set — and it is the same product, not a second
+one.
+
 ## Which shop a product is bought in
 
 Every product belongs to a kind of shop, because that is what decides where it

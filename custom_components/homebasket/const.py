@@ -104,6 +104,8 @@ KIND_SOURCES: Final = {
     KIND_PRODUCT: SOURCE_OPENPRODUCTSFACTS,
 }
 SOURCE_IMPORT: Final = "import"
+# Something a shopping list configured and handed over, rather than a scan.
+SOURCE_LIST: Final = "list"
 
 # Services
 SERVICE_ADD_MAPPING: Final = "add_mapping"

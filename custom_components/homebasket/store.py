@@ -25,6 +25,32 @@ KEEP = object()
 # yoghurt in a 400 g and a 900 g tub can share one entry.
 ALIAS_KEY = "alias_of"
 
+# Not everything you buy has a barcode you ever scan - a loaf from the bakery,
+# a shopping list line someone typed. Such a product is stored under a key of
+# its own instead, which is not a barcode and is never shown as one. A real
+# barcode added later is attached to it like any other, so the product keeps
+# its name, picture and shop, and scanning finds it.
+LOCAL_PREFIX = "local:"
+
+
+def is_local(code: Any) -> bool:
+    """Return whether a code is a product's own key rather than a barcode."""
+    return normalize_code(code).startswith(LOCAL_PREFIX)
+
+
+def barcodes_of(product: dict[str, Any]) -> list[str]:
+    """Return a product's real barcodes, without its own key."""
+    return [code for code in product.get("codes", []) if not is_local(code)]
+
+
+def _slug(name: str) -> str:
+    """Return a short, readable piece of a name to build a key from."""
+    kept = [
+        character if character.isalnum() else "-"
+        for character in str(name or "").strip().casefold()
+    ]
+    return "".join(kept).strip("-")[:40] or "product"
+
 
 def normalize_code(code: Any) -> str:
     """Return a canonical representation of a scanned code."""
@@ -164,6 +190,55 @@ class MappingStore:
         self._pending.pop(scanned, None)
         await self._async_save()
         return {"code": code, "codes": self.codes_for(code), **entry}
+
+    async def async_create_local(
+        self,
+        name: str,
+        *,
+        brand: str | None = None,
+        category: str | None = None,
+        image: str | None = None,
+        kind: str | None = None,
+        department: str | None = None,
+        source: str = SOURCE_MANUAL,
+    ) -> dict[str, Any]:
+        """Create a product that has no barcode, and return it.
+
+        The key is its own, not a barcode; a real one can be attached later.
+        """
+        base = f"{LOCAL_PREFIX}{_slug(name)}"
+        code = base
+        suffix = 2
+        while code in self._mappings:
+            code = f"{base}-{suffix}"
+            suffix += 1
+
+        return await self.async_save_mapping(
+            code,
+            name,
+            brand=brand,
+            category=category,
+            image=image,
+            kind=kind,
+            department=department,
+            source=source,
+        )
+
+    def find_by_name(self, name: str) -> tuple[str, dict[str, Any]] | None:
+        """Return the product with exactly this name, if there is one.
+
+        Only an exact match counts - a near one would quietly attach the wrong
+        product to the wrong line.
+        """
+        wanted = str(name or "").strip().casefold()
+        if not wanted:
+            return None
+        for code, entry in self._mappings.items():
+            if ALIAS_KEY in entry:
+                continue
+            if str(entry.get("name") or "").strip().casefold() == wanted:
+                return code, entry
+        return None
 
     async def async_set_department(self, code: str, department: str | None) -> bool:
         """Record which kind of shop a product is bought in."""

@@ -36,7 +36,7 @@ from .const import (
 )
 from .details import DetailStore
 from .images import ImageStore
-from .store import MappingStore, normalize_code
+from .store import MappingStore, is_local, normalize_code
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -418,6 +418,11 @@ class HomeBasketManager:
         A product that has been looked up before says which database knew it,
         so a re-lookup goes straight there instead of asking both again.
         """
+        if is_local(code):
+            # Not a barcode: a product a shopping list configured, which no
+            # database has ever heard of. Asking would be asking about nothing.
+            return None
+
         known = (self.store.get(code) or {}).get("kind")
         details = await openfoodfacts.async_fetch(
             self.hass, code, self.language, kind=known
@@ -428,6 +433,13 @@ class HomeBasketManager:
             # looked up.
             await self.store.async_set_kind(code, details.get("kind"))
         return details
+
+    async def async_set_photo(self, code: str, photo: str | None) -> None:
+        """Store or clear the picture someone took of a product."""
+        if photo:
+            await self.images.async_set(code, photo)
+        else:
+            await self.images.async_delete(code)
 
     async def async_forget(self, code: str) -> bool:
         """Remove a product, its other barcodes, its photo and its records."""

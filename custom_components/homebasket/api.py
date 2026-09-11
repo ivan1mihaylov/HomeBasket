@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from .const import KIND_DEPARTMENTS
+from .const import KIND_DEPARTMENTS, SOURCE_LIST
 
 if TYPE_CHECKING:
     from .manager import HomeBasketManager
@@ -133,6 +133,64 @@ class HomeBasketAPI:
         product is a remote Open Food Facts URL and needs no call.
         """
         return await self._manager.images.async_get(code)
+
+    async def async_remember_product(
+        self,
+        name: str,
+        *,
+        department: str | None = None,
+        category: str | None = None,
+        image: str | None = None,
+        kind: str | None = None,
+        photo: str | None = None,
+        source: str = SOURCE_LIST,
+    ) -> dict[str, Any] | None:
+        """Keep something that has no barcode, and return the product.
+
+        This is how a shopping list hands over what someone configured on it:
+        a name, a picture, the kind of shop it comes from. A product of that
+        name already here is the answer - the list means that one - and is
+        filled in where it said nothing rather than overwritten. Otherwise a
+        new product is created with a key of its own instead of a barcode,
+        which the card can turn into a real one later.
+        """
+        if not (name := str(name or "").strip()):
+            return None
+
+        store = self._manager.store
+        if (found := store.find_by_name(name)) is not None:
+            code, entry = found
+            if department and not entry.get("department"):
+                await store.async_set_department(code, department)
+            if photo and not self._manager.images.has(code):
+                await self._manager.async_set_photo(code, photo)
+            self._manager.async_notify_updated()
+            return self.get(code)
+
+        created = await store.async_create_local(
+            name,
+            category=category,
+            image=image,
+            kind=kind,
+            department=department,
+            source=source,
+        )
+        if photo:
+            await self._manager.async_set_photo(created["code"], photo)
+        self._manager.async_notify_updated()
+        return self.get(created["code"])
+
+    async def async_set_photo(self, code: str, photo: str | None) -> bool:
+        """Store a picture for a product, or clear it with None.
+
+        The picture is one someone took, as opposed to the `image` a database
+        supplied. Returns whether there is a product to store it for.
+        """
+        if self._manager.store.resolve(code) is None:
+            return False
+        await self._manager.async_set_photo(code, photo)
+        self._manager.async_notify_updated()
+        return True
 
     async def async_set_department(self, code: str, department: str | None) -> bool:
         """Say which kind of shop a product is bought in.
