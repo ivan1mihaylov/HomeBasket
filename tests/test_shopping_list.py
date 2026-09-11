@@ -196,6 +196,15 @@ async def main() -> None:
     check("...and the to-do list is left alone", todo.items, [])
     check("...carrying the barcode", lists.calls[0]["product_code"], "123")
 
+    # Whichever database knew the barcode is what the list is told it is.
+    for code, kind in (("124", "beauty"), ("125", "petfood"), ("126", "product")):
+        await paired.async_add_to_list(f"Стока {code}", code=code, kind=kind)
+    check(
+        "...and which database knew it",
+        [call.get("type") for call in lists.calls],
+        [None, "beauty", "petfood", "product"],
+    )
+
     second = await paired.async_add_to_list("Мляко", code="123")
     check("scanning the same product again counts one more", second["increased"], True)
     check("...rather than adding a line", second["added"], False)
