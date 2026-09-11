@@ -210,7 +210,7 @@ class HomeBasketManager:
         if add_to_list and result["name"]:
             result.update(
                 await self.async_add_to_list(
-                    result["name"], code=result["product_code"]
+                    result["name"], code=result["product_code"], kind=result["kind"]
                 )
             )
 
@@ -230,7 +230,7 @@ class HomeBasketManager:
         return self._option(CONF_LIST_ENTRY, None) or None
 
     async def async_add_to_list(
-        self, name: str, *, code: str | None = None
+        self, name: str, *, code: str | None = None, kind: str | None = None
     ) -> dict[str, Any]:
         """Put a product on the shopping list.
 
@@ -243,12 +243,12 @@ class HomeBasketManager:
         count went up, `already_on_list` when it was there and nothing needed
         doing.
         """
-        if (outcome := await self._async_add_to_lists(name, code)) is not None:
+        if (outcome := await self._async_add_to_lists(name, code, kind)) is not None:
             return outcome
         return await self._async_add_to_todo(name)
 
     async def _async_add_to_lists(
-        self, name: str, code: str | None
+        self, name: str, code: str | None, kind: str | None = None
     ) -> dict[str, Any] | None:
         """Put a product on a HomeBasket Lists list, if there is one.
 
@@ -261,7 +261,12 @@ class HomeBasketManager:
 
         try:
             result = await api.async_add_item(
-                name, entry_id=self.list_entry, quantity=1, product_code=code
+                name,
+                entry_id=self.list_entry,
+                quantity=1,
+                product_code=code,
+                # A grocery lands on the list as a grocery; a thing as a thing.
+                type=kind,
             )
         except Exception:  # noqa: BLE001 - fall back to the to-do list
             _LOGGER.exception("HomeBasket Lists would not take '%s'", name)
