@@ -17,12 +17,24 @@ offline.
    Open Food Facts ──found──▶ remember ──┤
           │ not found                    │
           ▼                              ▼
-   waits in the card          todo.add_item  ──▶  ✅ shopping list
-   until you name it          (duplicates skipped)
+   waits in the card            shopping list  ──▶  ✅
+   until you name it      (a to-do entity, or a HomeBasket
+                           Lists list that counts repeats)
 ```
 
 The dashboard card lives in a separate repository:
 [**HomeBasket-Card**](https://github.com/ivan1mihaylov/HomeBasket-Card).
+
+## Languages
+
+The integration's own interface — setup, options and the names of its entities
+— is translated into **Bulgarian** and **English**, and follows the language of
+the person using Home Assistant. Anything else falls back to English.
+
+Product names are a separate matter: **Preferred product name language** in the
+settings is the language asked of Open Food Facts (`bg`, `en`, `de`, …), and it
+falls back to the international name when that language has none. Names you
+type in yourself are kept exactly as typed, in any language.
 
 ## Installation
 
@@ -68,6 +80,8 @@ Everything is configured in the UI, and can be changed later through
 | `homebasket.remove_mapping` | Forget a barcode. |
 | `homebasket.lookup` | Query Open Food Facts without changing anything. |
 | `homebasket.import_mappings` | Import a JSON barcode dictionary (see below). |
+| `homebasket.get_product` | Return one product, optionally with its Open Food Facts record. Changes nothing. |
+| `homebasket.get_products` | Return every product, narrowed by `query` or `category`. Changes nothing. |
 
 All actions accept both `code` and the older `barcode` spelling, and
 `add_mapping` accepts `name`, `product` or `product_name`.
@@ -82,8 +96,8 @@ data:
 action: homebasket.add_mapping
 data:
   code: "3800123456789"
-  name: Прясно мляко
-  category: Млечни продукти
+  name: Fresh milk
+  category: Dairy
 ```
 
 ## With HomeBasket Lists
@@ -93,7 +107,7 @@ HomeBasket works on its own, and so does
 needs the other installed. When both are there, a scan goes on a HomeBasket
 Lists list rather than a to-do entity, and **scanning the same product again
 counts one more of it** instead of repeating the line: two bottles of milk
-become *мляко, 2 бр.* That is the list's own setting, so a list can be told to
+become *milk, 2 pcs*. That is the list's own setting, so a list can be told to
 keep what it has or to write a second line instead; HomeBasket reports whichever
 happened in `added`, `increased` and `already_on_list`.
 
@@ -133,10 +147,13 @@ curl -X POST https://your-ha/api/homebasket/scan \
 
 | Event | Fired when |
 | --- | --- |
-| `homebasket_scanned` | A code was processed. Payload: `code`, `name`, `brand`, `category`, `image`, `status`, `added`, `already_on_list`, `source`, `timestamp`. |
+| `homebasket_scanned` | A code was processed. Payload: `code`, `product_code`, `name`, `brand`, `category`, `image`, `status`, `added`, `increased`, `already_on_list`, `quantity`, `list`, `source`, `timestamp`. |
 | `homebasket_updated` | The dictionary changed; the card refreshes on this. |
 
-`status` is `known`, `looked_up` or `unknown`.
+`status` is `known`, `looked_up` or `unknown`. `added` means a new line on the
+shopping list, `increased` that the count of one already there went up (a
+HomeBasket Lists list can do that), `already_on_list` that it was left alone;
+`list` says where it went.
 
 ## Migrating an existing barcode dictionary
 
@@ -148,7 +165,7 @@ data:
   path: /config/custom_components/beepbasket/barcode_cache.json
 ```
 
-Both `{"3800...": "Мляко"}` and `{"3800...": {"name": "Мляко"}}` shapes are
+Both `{"3800...": "Milk"}` and `{"3800...": {"name": "Milk"}}` shapes are
 understood, and existing HomeBasket entries are kept unless you pass
 `overwrite: true`.
 
