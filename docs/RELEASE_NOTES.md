@@ -1,3 +1,4 @@
-An eighth kind of shop: **medicines**. Like the greengrocer, the butcher, the
-bakery and the builders' merchant, nothing lands there by itself — it is for
-what you put there in a product's sheet.
+The eighth kind of shop is called **the pharmacy** now, rather than medicines —
+the rest of them are named after the shop you go to, and this one was not.
+
+Only the name on screen changed. Anything already put there stays where it is.

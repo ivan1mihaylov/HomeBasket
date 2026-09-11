@@ -174,7 +174,7 @@ is worth reminding you about it. There are eight:
 | Greengrocer | — |
 | Butcher | — |
 | Cosmetics | everything Open Beauty Facts knows |
-| Medicines | — |
+| Pharmacy | — |
 | Pet shop | everything Open Pet Food Facts knows |
 | Building supplies | — |
 

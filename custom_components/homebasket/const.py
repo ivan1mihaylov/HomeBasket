@@ -30,6 +30,8 @@ DEPARTMENT_BAKERY: Final = "bakery"
 DEPARTMENT_PRODUCE: Final = "produce"
 DEPARTMENT_BUTCHER: Final = "butcher"
 DEPARTMENT_COSMETICS: Final = "cosmetics"
+# The chemist's. Stored as "medicines", which is what it was called when it
+# first shipped; renaming the key would drop what anyone had already set.
 DEPARTMENT_MEDICINES: Final = "medicines"
 DEPARTMENT_PETS: Final = "pets"
 DEPARTMENT_BUILDING: Final = "building"
