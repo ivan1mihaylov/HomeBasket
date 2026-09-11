@@ -1,4 +1,9 @@
-"""Thin async client for the Open Food Facts product API."""
+"""Thin async client for the Open Food Facts family of product APIs.
+
+A barcode is looked for in Open Food Facts first, and in Open Products Facts
+after that - same API, same shape, everything that is not food. Which one
+answered is what tells a grocery from a thing.
+"""
 
 from __future__ import annotations
 
@@ -12,12 +17,18 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import dt as dt_util
 
-from .const import VERSION
+from .const import KIND_FOOD, KIND_PRODUCT, VERSION
 
 _LOGGER = logging.getLogger(__name__)
 
-API_URL = "https://world.openfoodfacts.org/api/v2/product/{code}.json"
-PRODUCT_URL = "https://world.openfoodfacts.org/product/{code}"
+# The two databases, in the order a barcode is looked for. Groceries are the
+# common case, so they are asked first.
+SITES = {
+    KIND_FOOD: "world.openfoodfacts.org",
+    KIND_PRODUCT: "world.openproductsfacts.org",
+}
+API_URL = "https://{host}/api/v2/product/{code}.json"
+PRODUCT_URL = "https://{host}/product/{code}"
 TIMEOUT = aiohttp.ClientTimeout(total=10)
 USER_AGENT = f"HomeBasket/{VERSION} (Home Assistant custom integration)"
 
@@ -162,18 +173,34 @@ def _fields(language: str | None) -> str:
 
 
 async def async_fetch(
-    hass: HomeAssistant, code: str, language: str | None = None
+    hass: HomeAssistant, code: str, language: str | None = None, kind: str | None = None
 ) -> dict[str, Any] | None:
-    """Fetch everything Open Food Facts knows about a barcode.
+    """Fetch everything the Open Food Facts family knows about a barcode.
 
-    Returns None when the product is unknown or the request fails.
+    Open Food Facts is asked first and Open Products Facts after it, unless
+    `kind` says which one answered last time - a re-lookup should not walk the
+    whole family again. Returns None when neither knows the barcode.
     """
     language = _language(language)
+    order = [kind] if kind in SITES else []
+    order += [name for name in SITES if name not in order]
+
+    for name in order:
+        found = await _async_fetch_from(hass, SITES[name], name, code, language)
+        if found is not None:
+            return found
+    return None
+
+
+async def _async_fetch_from(
+    hass: HomeAssistant, host: str, kind: str, code: str, language: str | None
+) -> dict[str, Any] | None:
+    """Ask one of the databases about a barcode."""
     session = async_get_clientsession(hass)
 
     try:
         response = await session.get(
-            API_URL.format(code=code),
+            API_URL.format(host=host, code=code),
             params={"fields": _fields(language)},
             headers={"User-Agent": USER_AGENT},
             timeout=TIMEOUT,
@@ -183,7 +210,7 @@ async def async_fetch(
         response.raise_for_status()
         payload = await response.json(content_type=None)
     except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as err:
-        _LOGGER.warning("Open Food Facts lookup for %s failed: %s", code, err)
+        _LOGGER.warning("%s lookup for %s failed: %s", host, code, err)
         return None
 
     if payload.get("status") != 1:
@@ -211,6 +238,8 @@ async def async_fetch(
 
     return {
         "code": code,
+        # Which database answered: a grocery, or a thing.
+        "kind": kind,
         # What the shopping list and the product row use.
         "label": label,
         "category": categories[-1] if categories else None,
@@ -245,7 +274,7 @@ async def async_fetch(
             "ingredients": product.get("image_ingredients_url") or None,
             "nutrition": product.get("image_nutrition_url") or None,
         },
-        "url": PRODUCT_URL.format(code=code),
+        "url": PRODUCT_URL.format(host=host, code=code),
         "fetched": dt_util.utcnow().isoformat(),
     }
 

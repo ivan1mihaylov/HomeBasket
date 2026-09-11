@@ -10,6 +10,13 @@ DOMAIN: Final = "homebasket"
 # it, scans go on the configured to-do entity as they always have.
 LISTS_API: Final = "homebasket_lists_api"
 
+# What a barcode turned out to be: a grocery, from Open Food Facts, or a thing,
+# from Open Products Facts. A product named by hand has neither until it is
+# looked up.
+KIND_FOOD: Final = "food"
+KIND_PRODUCT: Final = "product"
+KINDS: Final = [KIND_FOOD, KIND_PRODUCT]
+
 # Where the public API object is published for other integrations.
 DATA_API: Final = "homebasket_api"
 VERSION: Final = "0.1.0"
@@ -50,6 +57,7 @@ STATUS_UNKNOWN: Final = "unknown"
 # Where a mapping came from
 SOURCE_MANUAL: Final = "manual"
 SOURCE_OPENFOODFACTS: Final = "openfoodfacts"
+SOURCE_OPENPRODUCTSFACTS: Final = "openproductsfacts"
 SOURCE_IMPORT: Final = "import"
 
 # Services

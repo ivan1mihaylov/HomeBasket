@@ -27,7 +27,9 @@ from .const import (
     EVENT_UPDATED,
     LISTS_API,
     SIGNAL_UPDATED,
+    KIND_PRODUCT,
     SOURCE_OPENFOODFACTS,
+    SOURCE_OPENPRODUCTSFACTS,
     STATUS_KNOWN,
     STATUS_LOOKED_UP,
     STATUS_UNKNOWN,
@@ -149,6 +151,7 @@ class HomeBasketManager:
             "brand": None,
             "category": None,
             "image": None,
+            "kind": None,
             "status": STATUS_UNKNOWN,
             "added": False,
             "already_on_list": False,
@@ -170,6 +173,7 @@ class HomeBasketManager:
                 brand=mapping.get("brand"),
                 category=mapping.get("category"),
                 image=mapping.get("image"),
+                kind=mapping.get("kind"),
                 status=STATUS_KNOWN,
             )
             await self.store.async_record_scan(code)
@@ -181,7 +185,12 @@ class HomeBasketManager:
                     brand=product.get("brand"),
                     category=product.get("category"),
                     image=product.get("image"),
-                    source=SOURCE_OPENFOODFACTS,
+                    kind=product.get("kind"),
+                    source=(
+                        SOURCE_OPENPRODUCTSFACTS
+                        if product.get("kind") == KIND_PRODUCT
+                        else SOURCE_OPENFOODFACTS
+                    ),
                 )
                 await self.store.async_record_scan(code)
                 result.update(
@@ -189,6 +198,7 @@ class HomeBasketManager:
                     brand=product.get("brand"),
                     category=product.get("category"),
                     image=product.get("image"),
+                    kind=product.get("kind"),
                     status=STATUS_LOOKED_UP,
                 )
 
@@ -328,10 +338,20 @@ class HomeBasketManager:
         return [item["summary"] for item in items if item.get("summary")]
 
     async def async_fetch_details(self, code: str) -> dict[str, Any] | None:
-        """Ask Open Food Facts about a code and cache what comes back."""
-        details = await openfoodfacts.async_fetch(self.hass, code, self.language)
+        """Ask the databases about a code and cache what comes back.
+
+        A product that has been looked up before says which database knew it,
+        so a re-lookup goes straight there instead of asking both again.
+        """
+        known = (self.store.get(code) or {}).get("kind")
+        details = await openfoodfacts.async_fetch(
+            self.hass, code, self.language, kind=known
+        )
         if details is not None:
             await self.details.async_set(code, details)
+            # A product named by hand learns what it is the first time it is
+            # looked up.
+            await self.store.async_set_kind(code, details.get("kind"))
         return details
 
     async def async_forget(self, code: str) -> bool:

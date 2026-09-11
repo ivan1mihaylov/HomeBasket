@@ -125,6 +125,7 @@ class MappingStore:
         brand: str | None = None,
         category: str | None | object = KEEP,
         image: str | None | object = KEEP,
+        kind: str | None | object = KEEP,
         source: str = SOURCE_MANUAL,
     ) -> dict[str, Any]:
         """Create or update a product and drop the code from the pending list."""
@@ -139,6 +140,8 @@ class MappingStore:
             "brand": brand or existing.get("brand"),
             "category": existing.get("category") if category is KEEP else category,
             "image": existing.get("image") if image is KEEP else image,
+            # Food or not, as far as the databases are concerned.
+            "kind": existing.get("kind") if kind is KEEP else kind,
             "source": source,
             "created": existing.get("created", now),
             "updated": now,
@@ -149,6 +152,23 @@ class MappingStore:
         self._pending.pop(scanned, None)
         await self._async_save()
         return {"code": code, "codes": self.codes_for(code), **entry}
+
+    async def async_set_kind(self, code: str, kind: str | None) -> bool:
+        """Record what a product turned out to be, leaving the rest alone.
+
+        A product named by hand has no kind until something looks it up, and
+        that lookup should not rewrite the name or the source.
+        """
+        if (resolved := self.resolve(code)) is None or not kind:
+            return False
+        primary, entry = resolved
+        if entry.get("kind") == kind:
+            return False
+
+        entry["kind"] = kind
+        self._mappings[primary] = entry
+        await self._async_save()
+        return True
 
     async def async_remove_mapping(self, code: str) -> list[str]:
         """Remove a product and every barcode of it.

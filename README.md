@@ -4,8 +4,14 @@ Scan a barcode, get the product on your Home Assistant shopping list.
 
 HomeBasket keeps a local dictionary of `barcode → product name`. When a code it
 does not know shows up, it asks [Open Food Facts](https://world.openfoodfacts.org/)
-and remembers the answer, so the second scan of the same product is instant and
-offline.
+and, for anything that is not a grocery,
+[Open Products Facts](https://world.openproductsfacts.org/) — then remembers the
+answer, so the second scan of the same product is instant and offline.
+
+Which of the two knew the barcode is what tells a grocery from a thing: a
+product carries that as its **kind**, `food` or `product`, and the card shows
+each one the fields it actually has — Nutri-Score and nutrition for a yoghurt,
+origin and packaging for a lamp.
 
 ```
         scan
@@ -15,6 +21,7 @@ offline.
           │ no                           │
           ▼                              │
    Open Food Facts ──found──▶ remember ──┤
+   then Open Products Facts               │
           │ not found                    │
           ▼                              ▼
    waits in the card            shopping list  ──▶  ✅
@@ -59,7 +66,7 @@ Everything is configured in the UI, and can be changed later through
 | --- | --- |
 | **Shopping list** | The `todo.*` entity scanned products are added to. Can be left empty when a HomeBasket Lists list is chosen instead. |
 | **HomeBasket Lists list** | Only shown when [HomeBasket Lists](https://github.com/ivan1mihaylov/HomeBasket-Lists) is installed: scans go on that list instead of the to-do entity. |
-| **Look unknown barcodes up on Open Food Facts** | Turn off to run fully offline. |
+| **Look unknown barcodes up on Open Food Facts** | Off runs fully offline. On, a barcode is looked for in Open Food Facts and then in Open Products Facts. |
 | **Add unidentified barcodes to the list as-is** | Off by default; unidentified codes wait in the card instead of putting a raw number on your list. |
 | **Preferred product name language** | Two letter code, e.g. `bg`. Falls back to the international name. |
 | **Scanner events to listen for** | Comma separated. Default `barcode_scanned`. |
@@ -239,7 +246,7 @@ photo = await api.async_get_photo("3800123456789")       # data URL, or None
 | Member | Returns |
 | --- | --- |
 | `api_version` | `1` today. Check it before relying on the shape. |
-| `products` | Every product: `code`, `name`, `brand`, `category`, `image`, `source`, `scan_count`, `has_photo`. |
+| `products` | Every product: `code`, `name`, `brand`, `category`, `image`, `kind`, `source`, `scan_count`, `has_photo`. |
 | `pending` | Scanned codes that could not be identified. |
 | `get(code)` | One product, or `None`. |
 | `find(text)` | Products matching a name, brand, category or code. |
@@ -281,6 +288,7 @@ The barcode dictionary has a test that runs without Home Assistant:
 
 ```bash
 python3 tests/test_store.py          # what a barcode resolves to
+python3 tests/test_lookup.py         # which database a barcode is looked for in
 python3 tests/test_shopping_list.py  # where a scanned product ends up
 ```
 
