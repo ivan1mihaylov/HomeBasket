@@ -42,13 +42,17 @@ scanned, once, and keeps it.
 The dashboard card lives in a separate repository:
 [**HomeBasket-Card**](https://github.com/ivan1mihaylov/HomeBasket-Card).
 
-## The three parts
+## The parts
 
-| | What it is |
-| --- | --- |
-| **HomeBasket** | Scanning, and the products it learns: names, barcodes, pictures, everything the databases know. Everything else reads from here. |
-| **[HomeBasket Card](https://github.com/ivan1mihaylov/HomeBasket-Card)** | Scanning with a phone, for when there is no scanner on a shelf — and the place to look after the products themselves. |
-| **[HomeBasket Lists](https://github.com/ivan1mihaylov/HomeBasket-Lists)** | Shopping lists and tasks, using what HomeBasket knows. |
+Each part is installed separately; **Needs** says what it cannot work without. Mealie is the recipe manager, not one of these parts.
+
+| | What it is | Needs |
+| --- | --- | --- |
+| **HomeBasket** | This: scanning, and the products it learns: names, barcodes, pictures, everything the databases know. | Nothing else. Puts scans on a HomeBasket Lists list when that is installed, otherwise on a to-do list. |
+| **[HomeBasket Card](https://github.com/ivan1mihaylov/HomeBasket-Card)** | Scanning with a phone, for when there is no scanner on a shelf — and the place to look after the products themselves. | **HomeBasket** (required). |
+| **[HomeBasket Lists](https://github.com/ivan1mihaylov/HomeBasket-Lists)** | Shopping lists and tasks, using what HomeBasket knows. | Nothing else. HomeBasket is optional: with it, items get products and pictures, and a list can scan. |
+| **[Mealie Discover](https://github.com/ivan1mihaylov/Mealie-Discover)** | Finds recipes on the web and adds them to Mealie. | **Mealie** (required), and at least one of SearXNG, a YouTube key or Social to Mealie. |
+| **[Mealie Planner](https://github.com/ivan1mihaylov/Mealie-Planner)** | Plans the week in Mealie from your rules and the Lidl, Kaufland and Billa offers, and lists the week's products by shop. | **Mealie** (required). HomeBasket Lists is optional, for putting the products on a list; AI is optional. |
 
 A scan is a scan wherever it is made — the card, a hardware scanner, the button
 on a list — and it lands in the same place: the product is remembered here, and
